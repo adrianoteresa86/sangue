@@ -21,11 +21,10 @@ const origemCors = process.env.CORS_ORIGIN || 'http://localhost:5173,http://loca
 
 // Intermediários globais
 aplicacao.use(cors({
-  origin: origemCors.split(',').map((o) => o.trim()),
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-aplicacao.options('*', cors());
 
 aplicacao.use(express.json());
 aplicacao.use(express.urlencoded({ extended: true }));
