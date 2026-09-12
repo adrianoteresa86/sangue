@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #FF3B30;
+  --color-primary-medium: #E74C3C;
+  --color-primary-intense: #C0392B;
+  --color-primary-dark: #8B0000;
+  --color-secondary: #1F2937;
+  --color-accent: #059669;
+  --color-neutral: #F3F4F6;
+  --color-dark: #111827;
+}
+
+body, html {
+  background-color: #ffe6010a;
+  font-family: "Montserrat", sans-serif;
+  background-image: url('./assets/images/bg.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+/* Overlay para opacidade */
+body::before {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  opacity: 0.7;     /* ajuste aqui para mais ou menos opacidade */
+  pointer-events: none;
+}
+
+/* Esconder barra de scroll mas manter funcionalidade */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE e Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari e Opera */
+}

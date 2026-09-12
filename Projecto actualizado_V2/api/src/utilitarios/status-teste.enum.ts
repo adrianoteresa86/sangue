@@ -1,0 +1,7 @@
+export enum StatusTeste {
+  PENDENTE = 'PENDING',
+  EM_ANDAMENTO = 'IN_PROGRESS',
+  CONCLUIDO = 'COMPLETED',
+  FALHOU = 'FAILED',
+  CANCELADO = 'CANCELLED',
+}

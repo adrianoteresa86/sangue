@@ -1,0 +1,7937 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Sangue API",
+    "description": "API do sistema Sangue — gestão de doações de sangue, hemocentros, campanhas e transfusões.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Autenticação",
+      "description": "Login, registo e validação de token"
+    },
+    {
+      "name": "Utilizadores",
+      "description": "Gestão de utilizadores (ADMIN)"
+    },
+    {
+      "name": "Doadores",
+      "description": "Perfil e gestão de doadores"
+    },
+    {
+      "name": "Hemocentros",
+      "description": "Gestão de hemocentros"
+    },
+    {
+      "name": "Estoque de Sangue",
+      "description": "Controlo do estoque de sangue"
+    },
+    {
+      "name": "Campanhas",
+      "description": "Campanhas de doação"
+    },
+    {
+      "name": "Registos de Doação",
+      "description": "Registos de doações realizadas"
+    },
+    {
+      "name": "Agendamentos de Doação",
+      "description": "Agendamento de doações"
+    },
+    {
+      "name": "Pedidos de Transfusão",
+      "description": "Pedidos de transfusão de sangue"
+    },
+    {
+      "name": "Registos de Transfusão",
+      "description": "Registos de transfusões realizadas"
+    },
+    {
+      "name": "Notificações",
+      "description": "Notificações de utilizadores"
+    },
+    {
+      "name": "Estatísticas",
+      "description": "Estatísticas gerais do sistema"
+    },
+    {
+      "name": "Receptor",
+      "description": "Funcionalidades exclusivas do utilizador Receptor de sangue"
+    }
+  ],
+  "paths": {
+    "/auth/registrar": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Registar novo utilizador",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "senha"
+                ],
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "example": "João Silva"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "joao@exemplo.com"
+                  },
+                  "telefone": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "senha": {
+                    "type": "string",
+                    "example": "senha123"
+                  },
+                  "perfil": {
+                    "type": "string",
+                    "enum": [
+                      "DOADOR",
+                      "RECEPTOR"
+                    ],
+                    "example": "DOADOR"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/admin/register": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Registar utilizador como admin (requer token de admin)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "senha"
+                ],
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "example": "Admin Silva"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "admin@exemplo.com"
+                  },
+                  "telefone": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "senha": {
+                    "type": "string",
+                    "example": "senha123"
+                  },
+                  "perfil": {
+                    "type": "string",
+                    "enum": [
+                      "DOADOR",
+                      "ADMIN",
+                      "HEMOCENTRO",
+                      "RECEPTOR"
+                    ],
+                    "example": "ADMIN"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Fazer login com email/telefone e senha",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "identificador",
+                  "senha"
+                ],
+                "properties": {
+                  "identificador": {
+                    "type": "string",
+                    "example": "joao@exemplo.com",
+                    "description": "Email ou telefone"
+                  },
+                  "senha": {
+                    "type": "string",
+                    "example": "senha123"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/oauth-login": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Login via OAuth (Google, etc.)",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "joao@gmail.com"
+                  },
+                  "nome": {
+                    "type": "string",
+                    "example": "João Silva"
+                  },
+                  "provedor": {
+                    "type": "string",
+                    "example": "google"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Obter dados completos do utilizador autenticado",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/auth/validate": {
+      "get": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Validar token JWT",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/hemocentros/": {
+      "get": {
+        "tags": [
+          "Hemocentros"
+        ],
+        "summary": "Listar todos os hemocentros",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Hemocentros"
+        ],
+        "summary": "Criar hemocentro (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nome"
+                ],
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "example": "Hemocentro Central de Maputo"
+                  },
+                  "endereco": {
+                    "type": "string",
+                    "example": "Av. Eduardo Mondlane, 123"
+                  },
+                  "cidade": {
+                    "type": "string",
+                    "example": "Maputo"
+                  },
+                  "estado": {
+                    "type": "string",
+                    "example": "Maputo"
+                  },
+                  "telefone": {
+                    "type": "string",
+                    "example": "+258211234567"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "hemocentro@saude.gov.mz"
+                  },
+                  "horarioFuncionamento": {
+                    "type": "string",
+                    "example": "Seg-Sex 07:00-17:00"
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "example": "Centro de colheita e distribuição de sangue"
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "example": -25.9692
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "example": 32.5732
+                  },
+                  "ativo": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hemocentros/activos": {
+      "get": {
+        "tags": [
+          "Hemocentros"
+        ],
+        "summary": "Listar hemocentros activos",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/hemocentros/{id}": {
+      "get": {
+        "tags": [
+          "Hemocentros"
+        ],
+        "summary": "Obter hemocentro por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Hemocentros"
+        ],
+        "summary": "Actualizar hemocentro (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "example": "Hemocentro Central de Maputo"
+                  },
+                  "endereco": {
+                    "type": "string",
+                    "example": "Av. Eduardo Mondlane, 123"
+                  },
+                  "cidade": {
+                    "type": "string",
+                    "example": "Maputo"
+                  },
+                  "estado": {
+                    "type": "string",
+                    "example": "Maputo"
+                  },
+                  "telefone": {
+                    "type": "string",
+                    "example": "+258211234567"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "hemocentro@saude.gov.mz"
+                  },
+                  "horarioFuncionamento": {
+                    "type": "string",
+                    "example": "Seg-Sex 07:00-17:00"
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "example": "Centro de colheita e distribuição de sangue"
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "example": -25.9692
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "example": 32.5732
+                  },
+                  "ativo": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Hemocentros"
+        ],
+        "summary": "Remover hemocentro (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/estoque-sangue/": {
+      "get": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Listar todo o estoque de sangue",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Adicionar unidade ao estoque",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idHemocentro",
+                  "tipoSangue",
+                  "quantidade",
+                  "tipoComponente",
+                  "dataValidade"
+                ],
+                "properties": {
+                  "idHemocentro": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+",
+                    "description": "Ex: A+, B-, O+, AB-"
+                  },
+                  "quantidade": {
+                    "type": "number",
+                    "example": 500,
+                    "description": "Quantidade em ml"
+                  },
+                  "tipoComponente": {
+                    "type": "string",
+                    "example": "Sangue Total",
+                    "description": "Ex: Sangue Total, Plasma, Plaquetas"
+                  },
+                  "dataValidade": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2024-12-31"
+                  },
+                  "dataRecebimento": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2024-06-01"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/estoque-sangue/formatados": {
+      "get": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Listar todo o estoque de sangue com datas formatadas",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/estoque-sangue/status/{status}": {
+      "get": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Listar estoque por status",
+        "description": "",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Status do estoque",
+            "enum": [
+              "Adequado",
+              "Baixo",
+              "Crítico"
+            ]
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/estoque-sangue/vencendo-em-breve": {
+      "get": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Listar unidades de sangue a vencer em breve",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/estoque-sangue/hemocentro/{idHemocentro}": {
+      "get": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Listar estoque por hemocentro",
+        "description": "",
+        "parameters": [
+          {
+            "name": "idHemocentro",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/estoque-sangue/hemocentro/{idHemocentro}/disponiveis": {
+      "get": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Listar unidades disponíveis por hemocentro",
+        "description": "",
+        "parameters": [
+          {
+            "name": "idHemocentro",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/estoque-sangue/{id}": {
+      "get": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Obter unidade de sangue por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Actualizar unidade do estoque",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "idHemocentro": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+"
+                  },
+                  "quantidade": {
+                    "type": "number",
+                    "example": 500
+                  },
+                  "tipoComponente": {
+                    "type": "string",
+                    "example": "Sangue Total"
+                  },
+                  "dataValidade": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2024-12-31"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Remover unidade do estoque",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/estoque-sangue/{id}/indisponivel": {
+      "patch": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Marcar unidade como indisponível",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/estoque-sangue/{id}/diminuir": {
+      "patch": {
+        "tags": [
+          "Estoque de Sangue"
+        ],
+        "summary": "Diminuir quantidade do estoque",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "quantidade"
+                ],
+                "properties": {
+                  "quantidade": {
+                    "type": "number",
+                    "example": 100,
+                    "description": "Quantidade a diminuir (em ml)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/campanhas/": {
+      "get": {
+        "tags": [
+          "Campanhas"
+        ],
+        "summary": "Listar todas as campanhas",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Campanhas"
+        ],
+        "summary": "Criar campanha (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "titulo",
+                  "dataInicio",
+                  "dataFim",
+                  "metaDoacoes",
+                  "idHemocentro"
+                ],
+                "properties": {
+                  "titulo": {
+                    "type": "string",
+                    "example": "Campanha de Doação de Sangue - Junho 2024"
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "example": "Campanha especial para reforço do estoque de sangue"
+                  },
+                  "dataInicio": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2024-06-01"
+                  },
+                  "dataFim": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2024-06-30"
+                  },
+                  "tipoSanguineo": {
+                    "type": "string",
+                    "example": "O-",
+                    "description": "Tipo sanguíneo alvo (opcional)"
+                  },
+                  "metaDoacoes": {
+                    "type": "integer",
+                    "example": 100
+                  },
+                  "idHemocentro": {
+                    "type": "integer",
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/campanhas/activas": {
+      "get": {
+        "tags": [
+          "Campanhas"
+        ],
+        "summary": "Listar campanhas activas",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/campanhas/hemocentro/{idHemocentro}": {
+      "get": {
+        "tags": [
+          "Campanhas"
+        ],
+        "summary": "Listar campanhas por hemocentro",
+        "description": "",
+        "parameters": [
+          {
+            "name": "idHemocentro",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/campanhas/{id}": {
+      "get": {
+        "tags": [
+          "Campanhas"
+        ],
+        "summary": "Obter campanha por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Campanhas"
+        ],
+        "summary": "Actualizar campanha (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "titulo": {
+                    "type": "string",
+                    "example": "Campanha de Doação de Sangue - Junho 2024"
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "example": "Campanha especial para reforço do estoque de sangue"
+                  },
+                  "dataInicio": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2024-06-01"
+                  },
+                  "dataFim": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2024-06-30"
+                  },
+                  "tipoSanguineo": {
+                    "type": "string",
+                    "example": "O-"
+                  },
+                  "metaDoacoes": {
+                    "type": "integer",
+                    "example": 100
+                  },
+                  "ativo": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Campanhas"
+        ],
+        "summary": "Remover campanha (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/registros-doacao/": {
+      "get": {
+        "tags": [
+          "Registos de Doação"
+        ],
+        "summary": "Listar todos os registos de doação",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Registos de Doação"
+        ],
+        "summary": "Criar registo de doação",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idDoador",
+                  "idHemocentro",
+                  "quantidade",
+                  "tipoSangue",
+                  "tipoComponente",
+                  "nivelHemoglobina",
+                  "pressaoSistolica",
+                  "pressaoDiastolica",
+                  "pulso",
+                  "temperatura",
+                  "peso"
+                ],
+                "properties": {
+                  "idDoador": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "idHemocentro": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "idAgendamento": {
+                    "type": "integer",
+                    "example": 5
+                  },
+                  "dataDoacao": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-15T09:00:00Z"
+                  },
+                  "quantidade": {
+                    "type": "number",
+                    "example": 450,
+                    "description": "Quantidade em ml"
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+"
+                  },
+                  "tipoComponente": {
+                    "type": "string",
+                    "example": "Sangue Total"
+                  },
+                  "nivelHemoglobina": {
+                    "type": "number",
+                    "example": 14.5
+                  },
+                  "pressaoSistolica": {
+                    "type": "number",
+                    "example": 120
+                  },
+                  "pressaoDiastolica": {
+                    "type": "number",
+                    "example": 80
+                  },
+                  "pulso": {
+                    "type": "number",
+                    "example": 72
+                  },
+                  "temperatura": {
+                    "type": "number",
+                    "example": 36.5
+                  },
+                  "peso": {
+                    "type": "number",
+                    "example": 70
+                  },
+                  "observacoes": {
+                    "type": "string",
+                    "example": "Sem intercorrências"
+                  },
+                  "elegivel": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "motivoInelegibilidade": {
+                    "type": "string",
+                    "example": ""
+                  },
+                  "idTecnico": {
+                    "type": "integer",
+                    "example": 2
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/registros-doacao/meus": {
+      "get": {
+        "tags": [
+          "Registos de Doação"
+        ],
+        "summary": "Listar os meus registos de doação",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/registros-doacao/doador/{idDoador}": {
+      "get": {
+        "tags": [
+          "Registos de Doação"
+        ],
+        "summary": "Listar registos de doação por doador",
+        "description": "",
+        "parameters": [
+          {
+            "name": "idDoador",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/registros-doacao/hemocentro/{idHemocentro}": {
+      "get": {
+        "tags": [
+          "Registos de Doação"
+        ],
+        "summary": "Listar registos de doação por hemocentro",
+        "description": "",
+        "parameters": [
+          {
+            "name": "idHemocentro",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/registros-doacao/{id}": {
+      "get": {
+        "tags": [
+          "Registos de Doação"
+        ],
+        "summary": "Obter registo de doação por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Registos de Doação"
+        ],
+        "summary": "Actualizar registo de doação",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quantidade": {
+                    "type": "number",
+                    "example": 450
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+"
+                  },
+                  "tipoComponente": {
+                    "type": "string",
+                    "example": "Sangue Total"
+                  },
+                  "nivelHemoglobina": {
+                    "type": "number",
+                    "example": 14.5
+                  },
+                  "pressaoSistolica": {
+                    "type": "number",
+                    "example": 120
+                  },
+                  "pressaoDiastolica": {
+                    "type": "number",
+                    "example": 80
+                  },
+                  "pulso": {
+                    "type": "number",
+                    "example": 72
+                  },
+                  "temperatura": {
+                    "type": "number",
+                    "example": 36.5
+                  },
+                  "peso": {
+                    "type": "number",
+                    "example": 70
+                  },
+                  "observacoes": {
+                    "type": "string",
+                    "example": "Sem intercorrências"
+                  },
+                  "elegivel": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "motivoInelegibilidade": {
+                    "type": "string",
+                    "example": ""
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Registos de Doação"
+        ],
+        "summary": "Remover registo de doação (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos-doacao/": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar todos os agendamentos",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Criar agendamento de doação",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idHemocentro",
+                  "dataPreferida"
+                ],
+                "properties": {
+                  "idHemocentro": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "dataPreferida": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-20T08:00:00Z"
+                  },
+                  "horaPreferida": {
+                    "type": "string",
+                    "example": "08:00"
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+"
+                  },
+                  "observacoes": {
+                    "type": "string",
+                    "example": "Prefiro manhã"
+                  },
+                  "nomeContatoEmergencia": {
+                    "type": "string",
+                    "example": "Maria Silva"
+                  },
+                  "telefoneContatoEmergencia": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "cidade": {
+                    "type": "string",
+                    "example": "Maputo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agendamentos-doacao/meus": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar os meus agendamentos",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos-doacao/meus/futuros": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar os meus agendamentos futuros",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos-doacao/meus/passados": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar os meus agendamentos passados",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos-doacao/pode-doar": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Verificar se posso doar e próxima data disponível",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos-doacao/hemocentro/{idHemocentro}": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar agendamentos por hemocentro",
+        "description": "",
+        "parameters": [
+          {
+            "name": "idHemocentro",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos-doacao/{id}": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Obter agendamento por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos-doacao/{id}/status": {
+      "patch": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Actualizar status do agendamento",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "COMPLETED",
+                      "CANCELLED"
+                    ],
+                    "example": "COMPLETED"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agendamentos-doacao/{id}/cancelar": {
+      "patch": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Cancelar o meu agendamento",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar todos os agendamentos",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Criar agendamento de doação",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idHemocentro",
+                  "dataPreferida"
+                ],
+                "properties": {
+                  "idHemocentro": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "dataPreferida": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-20T08:00:00Z"
+                  },
+                  "horaPreferida": {
+                    "type": "string",
+                    "example": "08:00"
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+"
+                  },
+                  "observacoes": {
+                    "type": "string",
+                    "example": "Prefiro manhã"
+                  },
+                  "nomeContatoEmergencia": {
+                    "type": "string",
+                    "example": "Maria Silva"
+                  },
+                  "telefoneContatoEmergencia": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "cidade": {
+                    "type": "string",
+                    "example": "Maputo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agendamentos/meus": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar os meus agendamentos",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/meus/futuros": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar os meus agendamentos futuros",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/meus/passados": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar os meus agendamentos passados",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/pode-doar": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Verificar se posso doar e próxima data disponível",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/hemocentro/{idHemocentro}": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Listar agendamentos por hemocentro",
+        "description": "",
+        "parameters": [
+          {
+            "name": "idHemocentro",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/{id}": {
+      "get": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Obter agendamento por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/{id}/status": {
+      "patch": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Actualizar status do agendamento",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "COMPLETED",
+                      "CANCELLED"
+                    ],
+                    "example": "COMPLETED"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agendamentos/{id}/cancelar": {
+      "patch": {
+        "tags": [
+          "Agendamentos de Doação"
+        ],
+        "summary": "Cancelar o meu agendamento",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Listar todas as notificações (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/minhas": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Listar as minhas notificações",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/minhas/nao-lidas": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Listar as minhas notificações não lidas",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/minhas/contagem-nao-lidas": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Contar notificações não lidas",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/tipo/{tipo}": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Listar notificações por tipo (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "tipo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/entidade/{tipo}/{id}": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Listar notificações por entidade relacionada (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "tipo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/expiradas": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Listar notificações expiradas (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Remover notificações expiradas (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/lembrete-doacao": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Enviar lembrete de doação (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idDoador",
+                  "dataDoacao",
+                  "nomeHemocentro"
+                ],
+                "properties": {
+                  "idDoador": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "dataDoacao": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-20T08:00:00Z"
+                  },
+                  "nomeHemocentro": {
+                    "type": "string",
+                    "example": "Hemocentro Central de Maputo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notificacoes/doacao-confirmada": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Enviar confirmação de doação (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idDoador",
+                  "dataDoacao",
+                  "nomeHemocentro"
+                ],
+                "properties": {
+                  "idDoador": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "dataDoacao": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-15T09:00:00Z"
+                  },
+                  "nomeHemocentro": {
+                    "type": "string",
+                    "example": "Hemocentro Central de Maputo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notificacoes/urgencia-sangue": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Enviar alerta de urgência de sangue (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idsDestinatarios",
+                  "tipoSangue",
+                  "nomeHemocentro"
+                ],
+                "properties": {
+                  "idsDestinatarios": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [
+                      1,
+                      2,
+                      3
+                    ]
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O-"
+                  },
+                  "nomeHemocentro": {
+                    "type": "string",
+                    "example": "Hemocentro Central de Maputo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notificacoes/resultado-teste": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Enviar resultado de teste ao doador (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idDoador",
+                  "idTeste",
+                  "resultado"
+                ],
+                "properties": {
+                  "idDoador": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "idTeste": {
+                    "type": "integer",
+                    "example": 10
+                  },
+                  "resultado": {
+                    "type": "string",
+                    "example": "Negativo para HIV, Hepatite B e C"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notificacoes/em-massa-lista": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Enviar notificações em massa por lista (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idsDestinatarios",
+                  "titulo",
+                  "mensagem",
+                  "tipo"
+                ],
+                "properties": {
+                  "idsDestinatarios": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [
+                      1,
+                      2,
+                      3
+                    ]
+                  },
+                  "titulo": {
+                    "type": "string",
+                    "example": "Campanha de Junho"
+                  },
+                  "mensagem": {
+                    "type": "string",
+                    "example": "Precisa-se de doadores de sangue tipo O!"
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "DONATION_REMINDER",
+                      "BLOOD_URGENCY",
+                      "CAMPAIGN_ANNOUNCEMENT",
+                      "ADMIN_NOTIFICATION"
+                    ],
+                    "example": "CAMPAIGN_ANNOUNCEMENT"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notificacoes/pedido-sangue": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Notificar doadores sobre pedido de sangue",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idsDoadores",
+                  "tipoSangue",
+                  "idPedido"
+                ],
+                "properties": {
+                  "idsDoadores": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [
+                      1,
+                      2,
+                      3
+                    ]
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+"
+                  },
+                  "idPedido": {
+                    "type": "integer",
+                    "example": 5
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notificacoes/agendamento-doacao": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Notificar doador sobre agendamento",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idDoador",
+                  "idAgendamento",
+                  "dataAgendamento",
+                  "nomeHemocentro"
+                ],
+                "properties": {
+                  "idDoador": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "idAgendamento": {
+                    "type": "integer",
+                    "example": 7
+                  },
+                  "dataAgendamento": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-20T08:00:00Z"
+                  },
+                  "nomeHemocentro": {
+                    "type": "string",
+                    "example": "Hemocentro Central de Maputo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notificacoes/resposta/{id}": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Responder a uma notificação",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "resposta"
+                ],
+                "properties": {
+                  "resposta": {
+                    "type": "string",
+                    "example": "Confirmo que estarei presente."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notificacoes/{id}/lida": {
+      "patch": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Marcar notificação como lida",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/minhas/marcar-todas-lidas": {
+      "patch": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Marcar todas as minhas notificações como lidas",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notificacoes/{id}": {
+      "put": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Actualizar notificação (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "titulo": {
+                    "type": "string",
+                    "example": "Título actualizado"
+                  },
+                  "mensagem": {
+                    "type": "string",
+                    "example": "Mensagem actualizada"
+                  },
+                  "lida": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Obter notificação por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Remover notificação (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/notificacoes/": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Listar todas as notificações via painel admin",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Criar notificação individual (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idDestinatario",
+                  "titulo",
+                  "mensagem",
+                  "tipo"
+                ],
+                "properties": {
+                  "idDestinatario": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "titulo": {
+                    "type": "string",
+                    "example": "Aviso importante"
+                  },
+                  "mensagem": {
+                    "type": "string",
+                    "example": "Precisa de actualizar os seus dados."
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "DONATION_REMINDER",
+                      "DONATION_CONFIRMED",
+                      "BLOOD_URGENCY",
+                      "CAMPAIGN_ANNOUNCEMENT",
+                      "ADMIN_NOTIFICATION"
+                    ],
+                    "example": "ADMIN_NOTIFICATION"
+                  },
+                  "expiraEm": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-12-31T23:59:59Z"
+                  },
+                  "tipoEntidadeRelacionada": {
+                    "type": "string",
+                    "example": "agendamento"
+                  },
+                  "idEntidadeRelacionada": {
+                    "type": "integer",
+                    "example": 5
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/notificacoes/em-massa": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Enviar notificações em massa (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idsDestinatarios",
+                  "titulo",
+                  "mensagem",
+                  "tipo"
+                ],
+                "properties": {
+                  "idsDestinatarios": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [
+                      1,
+                      2,
+                      3
+                    ]
+                  },
+                  "titulo": {
+                    "type": "string",
+                    "example": "Campanha de Doação"
+                  },
+                  "mensagem": {
+                    "type": "string",
+                    "example": "Venha doar sangue este mês!"
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "DONATION_REMINDER",
+                      "BLOOD_URGENCY",
+                      "CAMPAIGN_ANNOUNCEMENT",
+                      "ADMIN_NOTIFICATION"
+                    ],
+                    "example": "CAMPAIGN_ANNOUNCEMENT"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/notificacoes/novo-utilizador": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Notificar admins sobre novo utilizador registado",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idNovoUtilizador"
+                ],
+                "properties": {
+                  "idNovoUtilizador": {
+                    "type": "integer",
+                    "example": 10
+                  },
+                  "nomeUtilizador": {
+                    "type": "string",
+                    "example": "João Silva"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/notificacoes/utilizadores/pendentes-aprovacao": {
+      "get": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Listar utilizadores pendentes de aprovação (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/notificacoes/utilizadores/{id}/aprovar": {
+      "put": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Aprovar utilizador (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/notificacoes/utilizadores/{id}/rejeitar": {
+      "put": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Rejeitar/desactivar utilizador (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/notificacoes/{id}": {
+      "delete": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Remover notificação via painel admin",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/registros-transfusao/": {
+      "get": {
+        "tags": [
+          "Registos de Transfusão"
+        ],
+        "summary": "Listar todos os registos de transfusão",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Registos de Transfusão"
+        ],
+        "summary": "Criar registo de transfusão",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idPedido",
+                  "idHemocentro",
+                  "idEstoqueSangue",
+                  "quantidadeAdministrada",
+                  "tipoSangue",
+                  "tipoComponente",
+                  "prePressaoSistolica",
+                  "prePressaoDiastolica",
+                  "prePulso",
+                  "preTemperatura",
+                  "preFrequenciaRespiratoria"
+                ],
+                "properties": {
+                  "idPedido": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "idHemocentro": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "idEstoqueSangue": {
+                    "type": "integer",
+                    "example": 3
+                  },
+                  "dataTransfusao": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-16T10:00:00Z"
+                  },
+                  "horaInicio": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-16T10:00:00Z"
+                  },
+                  "horaFim": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-16T11:30:00Z"
+                  },
+                  "quantidadeAdministrada": {
+                    "type": "number",
+                    "example": 450
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "A+"
+                  },
+                  "tipoComponente": {
+                    "type": "string",
+                    "example": "Concentrado de Hemácias"
+                  },
+                  "prePressaoSistolica": {
+                    "type": "number",
+                    "example": 120
+                  },
+                  "prePressaoDiastolica": {
+                    "type": "number",
+                    "example": 80
+                  },
+                  "prePulso": {
+                    "type": "number",
+                    "example": 72
+                  },
+                  "preTemperatura": {
+                    "type": "number",
+                    "example": 36.5
+                  },
+                  "preFrequenciaRespiratoria": {
+                    "type": "number",
+                    "example": 16
+                  },
+                  "durantePressaoSistolica": {
+                    "type": "number",
+                    "example": 118
+                  },
+                  "durantePressaoDiastolica": {
+                    "type": "number",
+                    "example": 78
+                  },
+                  "durantePulso": {
+                    "type": "number",
+                    "example": 74
+                  },
+                  "duranteTemperatura": {
+                    "type": "number",
+                    "example": 36.6
+                  },
+                  "posPressaoSistolica": {
+                    "type": "number",
+                    "example": 122
+                  },
+                  "posPressaoDiastolica": {
+                    "type": "number",
+                    "example": 82
+                  },
+                  "posPulso": {
+                    "type": "number",
+                    "example": 70
+                  },
+                  "posTemperatura": {
+                    "type": "number",
+                    "example": 36.5
+                  },
+                  "posFrequenciaRespiratoria": {
+                    "type": "number",
+                    "example": 15
+                  },
+                  "reacaoAdversa": {
+                    "type": "boolean",
+                    "example": false
+                  },
+                  "descricaoReacaoAdversa": {
+                    "type": "string",
+                    "example": ""
+                  },
+                  "concluida": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "complicacoes": {
+                    "type": "string",
+                    "example": ""
+                  },
+                  "observacoes": {
+                    "type": "string",
+                    "example": "Sem intercorrências"
+                  },
+                  "idEnfermeiro": {
+                    "type": "integer",
+                    "example": 2
+                  },
+                  "idMedico": {
+                    "type": "integer",
+                    "example": 3
+                  },
+                  "idReceptor": {
+                    "type": "integer",
+                    "example": 5
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/registros-transfusao/hemocentro/{idHemocentro}": {
+      "get": {
+        "tags": [
+          "Registos de Transfusão"
+        ],
+        "summary": "Listar registos de transfusão por hemocentro",
+        "description": "",
+        "parameters": [
+          {
+            "name": "idHemocentro",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/registros-transfusao/{id}": {
+      "get": {
+        "tags": [
+          "Registos de Transfusão"
+        ],
+        "summary": "Obter registo de transfusão por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Registos de Transfusão"
+        ],
+        "summary": "Actualizar registo de transfusão",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quantidadeAdministrada": {
+                    "type": "number",
+                    "example": 450
+                  },
+                  "reacaoAdversa": {
+                    "type": "boolean",
+                    "example": false
+                  },
+                  "descricaoReacaoAdversa": {
+                    "type": "string",
+                    "example": ""
+                  },
+                  "concluida": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "complicacoes": {
+                    "type": "string",
+                    "example": ""
+                  },
+                  "observacoes": {
+                    "type": "string",
+                    "example": "Sem intercorrências"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Registos de Transfusão"
+        ],
+        "summary": "Remover registo de transfusão (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/pedidos-transfusao/": {
+      "get": {
+        "tags": [
+          "Pedidos de Transfusão"
+        ],
+        "summary": "Listar todos os pedidos de transfusão",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Pedidos de Transfusão"
+        ],
+        "summary": "Criar pedido de transfusão",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idHemocentro",
+                  "nomePaciente",
+                  "tipoSanguinePaciente",
+                  "idadePaciente",
+                  "generoPaciente",
+                  "numeroProntuario",
+                  "diagnostico",
+                  "tipoComponente",
+                  "quantidadeSolicitada",
+                  "nivelUrgencia",
+                  "precisaAte"
+                ],
+                "properties": {
+                  "idHemocentro": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "nomePaciente": {
+                    "type": "string",
+                    "example": "Carlos Fernandes"
+                  },
+                  "tipoSanguinePaciente": {
+                    "type": "string",
+                    "example": "A+"
+                  },
+                  "idadePaciente": {
+                    "type": "integer",
+                    "example": 45
+                  },
+                  "generoPaciente": {
+                    "type": "string",
+                    "example": "M",
+                    "description": "M ou F"
+                  },
+                  "numeroProntuario": {
+                    "type": "string",
+                    "example": "HCM-2024-001234"
+                  },
+                  "diagnostico": {
+                    "type": "string",
+                    "example": "Anemia severa pós-cirúrgica"
+                  },
+                  "tipoComponente": {
+                    "type": "string",
+                    "example": "Concentrado de Hemácias"
+                  },
+                  "quantidadeSolicitada": {
+                    "type": "number",
+                    "example": 2,
+                    "description": "Número de unidades"
+                  },
+                  "nivelUrgencia": {
+                    "type": "integer",
+                    "example": 3,
+                    "description": "1=Baixa, 2=Média, 3=Alta, 4=Crítica"
+                  },
+                  "precisaAte": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-16T18:00:00Z"
+                  },
+                  "indicacaoClinica": {
+                    "type": "string",
+                    "example": "Pós-cirurgia cardíaca"
+                  },
+                  "idReceptor": {
+                    "type": "integer",
+                    "example": 5
+                  },
+                  "contatoMedico": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "observacoes": {
+                    "type": "string",
+                    "example": "Paciente alérgico a conservantes"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos-transfusao/pendentes": {
+      "get": {
+        "tags": [
+          "Pedidos de Transfusão"
+        ],
+        "summary": "Listar pedidos de transfusão pendentes",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/pedidos-transfusao/hemocentro/{idHemocentro}": {
+      "get": {
+        "tags": [
+          "Pedidos de Transfusão"
+        ],
+        "summary": "Listar pedidos de transfusão por hemocentro",
+        "description": "",
+        "parameters": [
+          {
+            "name": "idHemocentro",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/pedidos-transfusao/{id}": {
+      "get": {
+        "tags": [
+          "Pedidos de Transfusão"
+        ],
+        "summary": "Obter pedido de transfusão por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Pedidos de Transfusão"
+        ],
+        "summary": "Actualizar pedido de transfusão",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nomePaciente": {
+                    "type": "string",
+                    "example": "Carlos Fernandes"
+                  },
+                  "tipoSanguinePaciente": {
+                    "type": "string",
+                    "example": "A+"
+                  },
+                  "idadePaciente": {
+                    "type": "integer",
+                    "example": 45
+                  },
+                  "generoPaciente": {
+                    "type": "string",
+                    "example": "M"
+                  },
+                  "numeroProntuario": {
+                    "type": "string",
+                    "example": "HCM-2024-001234"
+                  },
+                  "diagnostico": {
+                    "type": "string",
+                    "example": "Anemia severa pós-cirúrgica"
+                  },
+                  "tipoComponente": {
+                    "type": "string",
+                    "example": "Concentrado de Hemácias"
+                  },
+                  "quantidadeSolicitada": {
+                    "type": "number",
+                    "example": 2
+                  },
+                  "nivelUrgencia": {
+                    "type": "integer",
+                    "example": 3
+                  },
+                  "precisaAte": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-06-16T18:00:00Z"
+                  },
+                  "indicacaoClinica": {
+                    "type": "string",
+                    "example": "Pós-cirurgia cardíaca"
+                  },
+                  "contatoMedico": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "observacoes": {
+                    "type": "string",
+                    "example": ""
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Pedidos de Transfusão"
+        ],
+        "summary": "Remover pedido de transfusão (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/pedidos-transfusao/{id}/status": {
+      "patch": {
+        "tags": [
+          "Pedidos de Transfusão"
+        ],
+        "summary": "Actualizar status do pedido de transfusão",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "APPROVED",
+                      "REJECTED",
+                      "IN_PROGRESS",
+                      "COMPLETED",
+                      "CANCELLED"
+                    ],
+                    "example": "APPROVED"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/doadores/": {
+      "get": {
+        "tags": [
+          "Doadores"
+        ],
+        "summary": "Listar todos os doadores (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Doadores"
+        ],
+        "summary": "Criar perfil de doador (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idUsuario",
+                  "tipoSangue"
+                ],
+                "properties": {
+                  "idUsuario": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+",
+                    "description": "Tipo sanguíneo (ex: A+, B-, O+, AB-)"
+                  },
+                  "idade": {
+                    "type": "number",
+                    "example": 28,
+                    "description": "Idade entre 18 e 65 anos"
+                  },
+                  "peso": {
+                    "type": "number",
+                    "example": 70,
+                    "description": "Peso mínimo de 50kg"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/doadores/perfil": {
+      "get": {
+        "tags": [
+          "Doadores"
+        ],
+        "summary": "Obter o meu perfil de doador",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Doadores"
+        ],
+        "summary": "Criar ou actualizar perfil do doador",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "tipoSangue"
+                ],
+                "properties": {
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+",
+                    "description": "Tipo sanguíneo (ex: A+, B-, O+, AB-)"
+                  },
+                  "idade": {
+                    "type": "number",
+                    "example": 28,
+                    "description": "Idade entre 18 e 65 anos"
+                  },
+                  "peso": {
+                    "type": "number",
+                    "example": 70,
+                    "description": "Peso mínimo de 50kg"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/doadores/verificar-perfis": {
+      "get": {
+        "tags": [
+          "Doadores"
+        ],
+        "summary": "Verificar doadores sem perfil (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/doadores/{id}/doacoes": {
+      "get": {
+        "tags": [
+          "Doadores"
+        ],
+        "summary": "Histórico de doações de um doador",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/doadores/{id}": {
+      "get": {
+        "tags": [
+          "Doadores"
+        ],
+        "summary": "Obter doador por ID (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Doadores"
+        ],
+        "summary": "Atualizar perfil de doador (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O+"
+                  },
+                  "idade": {
+                    "type": "number",
+                    "example": 28
+                  },
+                  "peso": {
+                    "type": "number",
+                    "example": 70
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Doadores"
+        ],
+        "summary": "Remover perfil de doador (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/usuarios/": {
+      "get": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Listar todos os utilizadores",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/usuarios/admins": {
+      "get": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Listar utilizadores com perfil ADMIN",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/usuarios/doadores": {
+      "get": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Listar utilizadores com perfil DOADOR",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/usuarios/receptores": {
+      "get": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Listar utilizadores com perfil RECEPTOR",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/usuarios/{id}": {
+      "get": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Obter utilizador por ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Actualizar utilizador (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "example": "João Silva"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "joao@exemplo.com"
+                  },
+                  "telefone": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "senha": {
+                    "type": "string",
+                    "example": "novaSenha123"
+                  },
+                  "perfil": {
+                    "type": "string",
+                    "enum": [
+                      "DOADOR",
+                      "ADMIN",
+                      "RECEPTOR"
+                    ],
+                    "example": "DOADOR"
+                  },
+                  "ativo": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Eliminar utilizador (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/usuarios/adicionar": {
+      "post": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Criar novo utilizador (ADMIN)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nome",
+                  "email",
+                  "senha"
+                ],
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "example": "João Silva"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "joao@exemplo.com"
+                  },
+                  "telefone": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "senha": {
+                    "type": "string",
+                    "example": "senha123"
+                  },
+                  "perfil": {
+                    "type": "string",
+                    "enum": [
+                      "DOADOR",
+                      "ADMIN",
+                      "RECEPTOR"
+                    ],
+                    "example": "DOADOR"
+                  },
+                  "ativo": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usuarios/meu-perfil": {
+      "put": {
+        "tags": [
+          "Utilizadores"
+        ],
+        "summary": "Actualizar próprio perfil (DOADOR/RECEPTOR)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "example": "João Silva"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "joao@exemplo.com"
+                  },
+                  "telefone": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "rua": {
+                    "type": "string",
+                    "example": "Rua Comandante Gika"
+                  },
+                  "numero": {
+                    "type": "string",
+                    "example": "567"
+                  },
+                  "bairro": {
+                    "type": "string",
+                    "example": "Alvalade"
+                  },
+                  "provincia": {
+                    "type": "string",
+                    "example": "Luanda"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/estatisticas/gerais": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/estatisticas/painel": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/estatisticas/publicas": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/teste/teste-notificacao": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "titulo": {
+                    "example": "any"
+                  },
+                  "mensagem": {
+                    "example": "any"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/teste/simples": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/teste-estoque-sangue/teste": {
+      "post": {
+        "description": "",
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/receptor/dashboard": {
+      "get": {
+        "tags": [
+          "Receptor"
+        ],
+        "summary": "Dashboard do receptor com estatísticas",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/receptor/perfil": {
+      "get": {
+        "tags": [
+          "Receptor"
+        ],
+        "summary": "Obter perfil completo do receptor (dados pessoais + médicos)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Receptor"
+        ],
+        "summary": "Actualizar perfil do receptor (dados pessoais + médicos)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "example": "Maria Silva"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "maria@email.com"
+                  },
+                  "telefone": {
+                    "type": "string",
+                    "example": "+258841234567"
+                  },
+                  "rua": {
+                    "type": "string",
+                    "example": "Av. Eduardo Mondlane"
+                  },
+                  "numero": {
+                    "type": "string",
+                    "example": "100"
+                  },
+                  "bairro": {
+                    "type": "string",
+                    "example": "Sommerschield"
+                  },
+                  "provincia": {
+                    "type": "string",
+                    "example": "Maputo"
+                  },
+                  "dataNascimento": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "1990-05-15"
+                  },
+                  "tipoSanguineo": {
+                    "type": "string",
+                    "example": "O-"
+                  },
+                  "peso": {
+                    "type": "number",
+                    "example": 65.5
+                  },
+                  "altura": {
+                    "type": "number",
+                    "example": 165
+                  },
+                  "historicoMedico": {
+                    "type": "string",
+                    "example": "Hipertensão controlada"
+                  },
+                  "genero": {
+                    "type": "string",
+                    "example": "F"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/receptor/meus-pedidos": {
+      "get": {
+        "tags": [
+          "Receptor"
+        ],
+        "summary": "Listar todos os pedidos de transfusão do receptor autenticado",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/receptor/solicitar": {
+      "post": {
+        "tags": [
+          "Receptor"
+        ],
+        "summary": "Criar pedido de transfusão simplificado (formulário do receptor)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "tipoSangue",
+                  "volume",
+                  "urgencia",
+                  "motivo"
+                ],
+                "properties": {
+                  "tipoSangue": {
+                    "type": "string",
+                    "example": "O-"
+                  },
+                  "volume": {
+                    "type": "number",
+                    "example": 500,
+                    "description": "Volume em mL"
+                  },
+                  "urgencia": {
+                    "type": "string",
+                    "enum": [
+                      "normal",
+                      "media",
+                      "urgente",
+                      "critica"
+                    ],
+                    "example": "urgente"
+                  },
+                  "motivo": {
+                    "type": "string",
+                    "example": "Cirurgia programada"
+                  },
+                  "observacoes": {
+                    "type": "string",
+                    "example": "Sem intolerâncias conhecidas"
+                  },
+                  "idHemocentro": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "precisaAte": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-05-10T18:00:00Z"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/receptor/pedidos/{id}/cancelar": {
+      "patch": {
+        "tags": [
+          "Receptor"
+        ],
+        "summary": "Cancelar pedido de transfusão próprio (apenas status Pendente)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/receptor/historico": {
+      "get": {
+        "tags": [
+          "Receptor"
+        ],
+        "summary": "Histórico de transfusões concluídas do receptor com estatísticas",
+        "description": "",
+        "parameters": [
+          {
+            "name": "substring(7",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "utilizador@exemplo.com"
+          },
+          "senha": {
+            "type": "string",
+            "example": "senha123"
+          }
+        },
+        "required": [
+          "email",
+          "senha"
+        ]
+      },
+      "RegistoDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "João Silva"
+          },
+          "email": {
+            "type": "string",
+            "example": "joao@exemplo.com"
+          },
+          "senha": {
+            "type": "string",
+            "example": "senha123"
+          },
+          "telefone": {
+            "type": "string",
+            "example": "+258841234567"
+          },
+          "perfil": {
+            "type": "string",
+            "example": "DOADOR"
+          }
+        },
+        "required": [
+          "nome",
+          "email",
+          "senha"
+        ]
+      },
+      "CriarUtilizadorDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "João Silva"
+          },
+          "email": {
+            "type": "string",
+            "example": "joao@exemplo.com"
+          },
+          "senha": {
+            "type": "string",
+            "example": "senha123"
+          },
+          "telefone": {
+            "type": "string",
+            "example": "+258841234567"
+          },
+          "perfil": {
+            "type": "string",
+            "example": "DOADOR"
+          },
+          "ativo": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "nome",
+          "email",
+          "senha"
+        ]
+      },
+      "ActualizarUtilizadorDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "João Silva"
+          },
+          "email": {
+            "type": "string",
+            "example": "joao@exemplo.com"
+          },
+          "telefone": {
+            "type": "string",
+            "example": "+258841234567"
+          },
+          "perfil": {
+            "type": "string",
+            "example": "DOADOR"
+          },
+          "ativo": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "ReceptorSolicitarDto": {
+        "type": "object",
+        "properties": {
+          "tipoSangue": {
+            "type": "string",
+            "example": "O-"
+          },
+          "volume": {
+            "type": "number",
+            "example": 500
+          },
+          "urgencia": {
+            "type": "string",
+            "example": "urgente"
+          },
+          "motivo": {
+            "type": "string",
+            "example": "Cirurgia programada"
+          },
+          "observacoes": {
+            "type": "string",
+            "example": "Sem intolerâncias conhecidas"
+          },
+          "idHemocentro": {
+            "type": "number",
+            "example": 1
+          },
+          "precisaAte": {
+            "type": "string",
+            "example": "2026-05-10T18:00:00Z"
+          }
+        },
+        "required": [
+          "tipoSangue",
+          "volume",
+          "urgencia",
+          "motivo"
+        ]
+      },
+      "ReceptorAtualizarPerfilDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "Maria Silva"
+          },
+          "email": {
+            "type": "string",
+            "example": "maria@email.com"
+          },
+          "telefone": {
+            "type": "string",
+            "example": "+258841234567"
+          },
+          "rua": {
+            "type": "string",
+            "example": "Av. Eduardo Mondlane"
+          },
+          "numero": {
+            "type": "string",
+            "example": "100"
+          },
+          "bairro": {
+            "type": "string",
+            "example": "Sommerschield"
+          },
+          "provincia": {
+            "type": "string",
+            "example": "Maputo"
+          },
+          "dataNascimento": {
+            "type": "string",
+            "example": "1990-05-15"
+          },
+          "tipoSanguineo": {
+            "type": "string",
+            "example": "O-"
+          },
+          "peso": {
+            "type": "number",
+            "example": 65.5
+          },
+          "altura": {
+            "type": "number",
+            "example": 165
+          },
+          "historicoMedico": {
+            "type": "string",
+            "example": "Hipertensão controlada"
+          },
+          "genero": {
+            "type": "string",
+            "example": "F"
+          }
+        }
+      },
+      "ReceptorDashboardResponse": {
+        "type": "object",
+        "properties": {
+          "ativos": {
+            "type": "number",
+            "example": 3
+          },
+          "concluidas": {
+            "type": "number",
+            "example": 12
+          },
+          "canceladas": {
+            "type": "number",
+            "example": 2
+          },
+          "tipoSanguineo": {
+            "type": "string",
+            "example": "O-"
+          },
+          "recentes": {
+            "type": "array",
+            "example": [],
+            "items": {}
+          }
+        }
+      },
+      "ReceptorHistoricoResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 12
+          },
+          "totalLitros": {
+            "type": "number",
+            "example": 5.2
+          },
+          "esteAno": {
+            "type": "number",
+            "example": 3
+          },
+          "transfusoes": {
+            "type": "array",
+            "example": [],
+            "items": {}
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Token JWT no formato: Bearer {token}"
+      }
+    }
+  }
+}
