@@ -1,9 +1,0 @@
-{
-  "name": "doarfazbem",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}

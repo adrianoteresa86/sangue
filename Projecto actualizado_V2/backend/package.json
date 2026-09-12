@@ -29,6 +29,7 @@
     "mysql2": "^3.9.4",
     "nodemailer": "^6.9.13",
     "pg": "^8.20.0",
+    "postgres": "^3.4.9",
     "reflect-metadata": "^0.2.2",
     "swagger-autogen": "^2.23.7",
     "swagger-ui-express": "^5.0.1",
