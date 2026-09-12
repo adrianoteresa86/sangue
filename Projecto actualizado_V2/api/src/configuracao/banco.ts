@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 import { Usuario } from '../entidades/Usuario';
 import { PerfilDoador } from '../entidades/PerfilDoador';
 import { PerfilReceptor } from '../entidades/PerfilReceptor';
@@ -27,7 +29,10 @@ export const FonteDados = new DataSource({
   database: process.env.DB_DATABASE || 'doador',
   synchronize: true,
   logging: process.env.NODE_ENV === 'development',
-  ssl: process.env.DB_HOST?.includes('supabase') ? { rejectUnauthorized: false } : false,
+  ssl: process.env.DB_HOST?.includes('supabase') ? { 
+    rejectUnauthorized: true,
+    ca: fs.readFileSync(path.resolve(__dirname, '../../prod-ca-2021.crt')).toString()
+  } : false,
   migrations: ['src/migrations/*.ts'],
   entities: [
     Usuario,
