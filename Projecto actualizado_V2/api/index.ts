@@ -1,2 +1,3 @@
-const aplicacao = require('../backend/dist/app').default;
-module.exports = aplicacao;
+// @ts-ignore
+import aplicacao from '../backend/dist/app.js';
+export default aplicacao;

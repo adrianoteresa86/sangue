@@ -1,6 +1,6 @@
 {
   "name": "doarfazbem-app",
-  "outputDirectory": "dist",
+  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
