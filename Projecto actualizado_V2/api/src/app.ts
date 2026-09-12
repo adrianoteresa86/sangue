@@ -9,10 +9,13 @@ import uploadControlador from './controladores/upload.controlador';
 import { FonteDados } from './configuracao/banco';
 import rotas from './rotas/index';
 import rateLimit from 'express-rate-limit';
+import { auditoriaIntermediario } from './intermediarios/auditoria.intermediario';
+import { erroIntermediario } from './intermediarios/erro.intermediario';
 
 dotenv.config();
 
 const aplicacao = express();
+aplicacao.set('trust proxy', 1); // Confiar no proxy reverso do Vercel para o rate limit funcionar corretamente
 const porta = Number(process.env.PORT) || 8080;
 const origemCors = process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3001';
 
@@ -27,9 +30,6 @@ aplicacao.options('*', cors());
 aplicacao.use(express.json());
 aplicacao.use(express.urlencoded({ extended: true }));
 
-import { auditoriaIntermediario } from './intermediarios/auditoria.intermediario';
-aplicacao.use(auditoriaIntermediario);
-
 // Rate Limiting (Proteção contra Brute Force / DDoS)
 const limitadorGeral = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
@@ -40,12 +40,39 @@ const limitadorGeral = rateLimit({
 });
 aplicacao.use('/api/', limitadorGeral);
 
+// Inicializar banco de dados para Serverless (Vercel)
+let isDbInitialized = false;
+const initDb = async () => {
+  if (!isDbInitialized) {
+    try {
+      await FonteDados.initialize();
+      isDbInitialized = true;
+      console.log('Ligação ao banco de dados estabelecida com sucesso');
+    } catch (erro) {
+      console.error('Erro ao ligar ao banco de dados:', erro);
+      throw erro;
+    }
+  }
+};
+
+// Middleware para garantir que o banco está conectado antes das rotas e auditoria
+aplicacao.use('/api', async (req, res, next) => {
+  try {
+    await initDb();
+    next();
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro interno de conexão ao banco de dados' });
+  }
+});
+
+// Middleware de auditoria (precisa do banco de dados)
+aplicacao.use(auditoriaIntermediario);
+
 // Documentação Swagger
 const swaggerFicheiro = path.resolve(__dirname, '../swagger.json');
 if (fs.existsSync(swaggerFicheiro)) {
   const swaggerDoc = JSON.parse(fs.readFileSync(swaggerFicheiro, 'utf-8'));
   aplicacao.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
-  console.log(`Documentação Swagger disponível em http://localhost:${porta}/api/v1/docs`);
 }
 
 // Ficheiros estáticos (documentos de autorização)
@@ -58,7 +85,6 @@ aplicacao.use('/api/v1/uploads', uploadControlador);
 aplicacao.use('/api/v1', rotas);
 
 // Middleware Global de Tratamento de Erros
-import { erroIntermediario } from './intermediarios/erro.intermediario';
 aplicacao.use(erroIntermediario);
 
 // Rota de saúde
@@ -66,21 +92,13 @@ aplicacao.get('/health', (_req, res) => {
   res.json({ estado: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Inicializar ligação ao banco de dados e arrancar servidor
-FonteDados.initialize()
-  .then(() => {
-    console.log('Ligação ao banco de dados estabelecida com sucesso');
-
-    if (process.env.VERCEL !== '1') {
-      aplicacao.listen(porta, () => {
-        console.log(`Servidor Sangue a correr na porta ${porta}`);
-        console.log(`API disponível em http://localhost:${porta}/api/v1`);
-      });
-    }
-  })
-  .catch((erro) => {
-    console.error('Erro ao ligar ao banco de dados:', erro);
-    // process.exit(1);
+if (process.env.VERCEL !== '1') {
+  initDb().then(() => {
+    aplicacao.listen(porta, () => {
+      console.log(`Servidor Sangue a correr na porta ${porta}`);
+      console.log(`API disponível em http://localhost:${porta}/api/v1`);
+    });
   });
+}
 
 export default aplicacao;

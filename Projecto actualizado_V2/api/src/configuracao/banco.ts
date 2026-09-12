@@ -30,8 +30,7 @@ export const FonteDados = new DataSource({
   synchronize: true,
   logging: process.env.NODE_ENV === 'development',
   ssl: process.env.DB_HOST?.includes('supabase') ? { 
-    rejectUnauthorized: true,
-    ca: fs.readFileSync(path.resolve(__dirname, '../../prod-ca-2021.crt')).toString()
+    rejectUnauthorized: false
   } : false,
   migrations: ['src/migrations/*.ts'],
   entities: [
