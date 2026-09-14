@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Pagination } from '../../components/common/Pagination';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '../../components/common/Card';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 import { Syringe, Droplets, BarChart2 } from 'lucide-react';
 import api from '../../services/api';
 import type { HistoricoReceptor, PedidoReceptor } from '../../types';
@@ -12,6 +14,10 @@ function formatDate(iso: string) {
 
 export const ReceptorHistorico: React.FC = () => {
   const { t } = useTranslation();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const { data, isLoading, isError } = useQuery<HistoricoReceptor>({
     queryKey: ['receptor-historico'],
@@ -40,11 +46,38 @@ export const ReceptorHistorico: React.FC = () => {
     { label: t('receptor.historico.stat_year'), value: String(data?.esteAno ?? 0), icon: <BarChart2 className="w-8 h-8 text-blue-500" /> },
   ];
 
+  const transfusoes = data?.transfusoes || [];
+  
+  const filtered = transfusoes.filter((t: any) => {
+    const matchesSearch = t.tipoSanguinePaciente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          t.diagnostico?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          t.hemocentro?.nome?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesSearch;
+  });
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filtered.map((t: any) => ({
+      'Data': formatDate(t.criadoEm),
+      'Tipo Sanguíneo': t.tipoSanguinePaciente || '-',
+      'Volume (mL)': t.quantidadeSolicitada || '-',
+      'Motivo': t.diagnostico || '-',
+      'Hemocentro': t.hemocentro?.nome || '-',
+      'Status': 'Concluída'
+    }));
+    exportToXLS(dataToExport, 'Historico_Transfusoes');
+  };
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">{t('receptor.historico.title')}</h1>
-        <p className="text-gray-600 mt-1">{t('receptor.historico.subtitle')}</p>
+        <p className="text-sm sm:text-base text-gray-600 mt-1">{t('receptor.historico.subtitle')}</p>
       </div>
 
       {/* Estatísticas */}
@@ -61,6 +94,15 @@ export const ReceptorHistorico: React.FC = () => {
           </Card>
         ))}
       </div>
+
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[]}
+      />
 
       {/* Tabela */}
       <Card>
@@ -83,7 +125,7 @@ export const ReceptorHistorico: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {data.transfusoes.map((item: PedidoReceptor) => (
+                {filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item: PedidoReceptor) => (
                   <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.criadoEm)}</td>
                     <td className="py-3 px-4">
@@ -107,6 +149,14 @@ export const ReceptorHistorico: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            
+            <Pagination
+              totalItems={filtered.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+            />
           </div>
         )}
       </Card>

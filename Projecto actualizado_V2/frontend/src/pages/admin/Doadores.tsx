@@ -3,16 +3,20 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '../../components/common/Button';
-import { Input } from '../../components/common/Input';
 import { PerfilDoadorForm } from '../../components/admin/forms';
 import { UserPlus, Edit, Trash2, UserX, UserCheck, User } from 'lucide-react';
+import { Pagination } from '../../components/common/Pagination';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 import api from '../../services/api';
 
 export const AdminDoadores: React.FC = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
   const [editingDoador, setEditingDoador] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const { data: doadoresData, isLoading: loadingDoadores, refetch } = useQuery({
     queryKey: ['doadores'],
@@ -51,11 +55,36 @@ export const AdminDoadores: React.FC = () => {
 
   const loading = creating || updating || deleting || toggling;
 
-  const filtered = doadores.filter(d =>
-    d.usuario?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.usuario?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.tipoSangue?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = doadores.filter((d: any) => {
+    const matchesSearch = d.usuario?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          d.usuario?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          d.tipoSangue?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesTipoSangue = !filterValues.tipoSangue || d.tipoSangue === filterValues.tipoSangue;
+    const matchesStatus = !filterValues.status || (filterValues.status === 'ativo' ? d.usuario?.ativo : !d.usuario?.ativo);
+
+    return matchesSearch && matchesTipoSangue && matchesStatus;
+  });
+
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filtered.map((d: any) => ({
+      'Doador': d.usuario?.nome || '-',
+      'Email': d.usuario?.email || '-',
+      'Telefone': d.usuario?.telefone || '-',
+      'Tipo Sanguíneo': d.tipoSangue || '-',
+      'Idade': d.idade || '-',
+      'Peso': d.peso || '-',
+      'Status': d.usuario?.ativo ? 'Ativo' : 'Inativo'
+    }));
+    exportToXLS(dataToExport, 'Doadores');
+  };
 
   const handleEdit = (doador: any) => {
     setEditingDoador(doador);
@@ -75,7 +104,7 @@ export const AdminDoadores: React.FC = () => {
 
   const handleToggleStatus = async (doador: any) => {
     try {
-      const newStatus = !doador.ativo;
+      const newStatus = !(doador.usuario?.ativo);
       await toggleStatus({ id: doador.id, ativo: newStatus });
       refetch();
     } catch (error) {
@@ -133,7 +162,7 @@ export const AdminDoadores: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900">
               {editingDoador ? t('admin.doadores.edit_title') : t('admin.doadores.new_title')}
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
               {editingDoador ? t('admin.doadores.edit_subtitle') : t('admin.doadores.new_subtitle')}
             </p>
           </div>
@@ -149,7 +178,7 @@ export const AdminDoadores: React.FC = () => {
             tipoSangue: editingDoador.tipoSangue,
           } : undefined}
           loading={loading}
-          usuarios={usuarios}
+          usuarios={editingDoador && editingDoador.usuario ? [editingDoador.usuario] : usuarios}
           onCancel={handleCancel}
         />
       </div>
@@ -158,10 +187,10 @@ export const AdminDoadores: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('admin.doadores.title')}</h1>
-          <p className="text-gray-600 mt-1">{t('admin.doadores.subtitle')}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('admin.doadores.title')}</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">{t('admin.doadores.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={handleNew} className="flex items-center gap-2">
           <UserPlus className="w-4 h-4" />
@@ -169,11 +198,36 @@ export const AdminDoadores: React.FC = () => {
         </Button>
       </div>
 
-      <Input
-        label={t('admin.doadores.search_label')}
-        placeholder={t('admin.doadores.search_placeholder')}
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'tipoSangue',
+            label: 'Todos os Tipos',
+            options: [
+              { value: 'A+', label: 'A+' },
+              { value: 'A-', label: 'A-' },
+              { value: 'B+', label: 'B+' },
+              { value: 'B-', label: 'B-' },
+              { value: 'AB+', label: 'AB+' },
+              { value: 'AB-', label: 'AB-' },
+              { value: 'O+', label: 'O+' },
+              { value: 'O-', label: 'O-' },
+            ]
+          },
+          {
+            key: 'status',
+            label: 'Todos os Estados',
+            options: [
+              { value: 'ativo', label: 'Ativo' },
+              { value: 'inativo', label: 'Inativo' }
+            ]
+          }
+        ]}
       />
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -215,15 +269,15 @@ export const AdminDoadores: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filtered.map((doador) => (
+                {paginatedData.map((doador) => (
                   <tr key={doador.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          doador.ativo ? 'bg-green-100' : 'bg-gray-100'
+                          doador.usuario?.ativo ? 'bg-green-100' : 'bg-gray-100'
                         }`}>
                           <User className={`w-5 h-5 ${
-                            doador.ativo ? 'text-green-600' : 'text-gray-400'
+                            doador.usuario?.ativo ? 'text-green-600' : 'text-gray-400'
                           }`} />
                         </div>
                         <div className="ml-4">
@@ -253,9 +307,9 @@ export const AdminDoadores: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        doador.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        doador.usuario?.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {doador.ativo ? t('admin.doadores.status_active') : t('admin.doadores.status_inactive')}
+                        {doador.usuario?.ativo ? t('admin.doadores.status_active') : t('admin.doadores.status_inactive')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -273,10 +327,10 @@ export const AdminDoadores: React.FC = () => {
                           <Trash2 className="w-4 h-4" />
                         </button>
                         <button
-                          className={`${doador.ativo ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'}`}
+                          className={`${doador.usuario?.ativo ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'}`}
                           onClick={() => handleToggleStatus(doador)}
                         >
-                          {doador.ativo ? (
+                          {doador.usuario?.ativo ? (
                             <UserX className="w-4 h-4" />
                           ) : (
                             <UserCheck className="w-4 h-4" />
@@ -289,6 +343,16 @@ export const AdminDoadores: React.FC = () => {
               </tbody>
             </table>
           </div>
+        )}
+        
+        {!loadingDoadores && filtered.length > 0 && (
+          <Pagination
+            totalItems={filtered.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
         )}
       </div>
     </div>

@@ -6,13 +6,19 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { CampanhaForm } from '../../components/admin/forms';
 import { Target, Edit, Trash2, Play, Pause } from 'lucide-react';
+import { Pagination } from '../../components/common/Pagination';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 import api from '../../services/api';
 
 export const AdminCampanhas: React.FC = () => {
   const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editingCampanha, setEditingCampanha] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const formatarDataParaInput = (data: string | Date) => {
     if (!data) return '';
@@ -72,6 +78,37 @@ export const AdminCampanhas: React.FC = () => {
     atualizadoEm: campanha.atualizadoEm ? formatarData(campanha.atualizadoEm) : null,
     ativo: campanha.ativo,
   })) : [];
+
+  const filtered = campanhas.filter((c: any) => {
+    const matchesSearch = c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          c.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = !filterValues.status || (filterValues.status === 'ativo' ? c.ativo : !c.ativo);
+    const matchesTipo = !filterValues.tipoSangue || c.tipoSanguineo === filterValues.tipoSangue;
+
+    return matchesSearch && matchesStatus && matchesTipo;
+  });
+
+  const paginatedCampanhas = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filtered.map((c: any) => ({
+      'Título': c.name || '-',
+      'Descrição': c.description || '-',
+      'Data Início': c.startDate || '-',
+      'Data Fim': c.endDate || '-',
+      'Tipo Sanguíneo': c.tipoSanguineo || '-',
+      'Meta de Doações': c.goal || 0,
+      'Doações Atuais': c.current || 0,
+      'Status': c.statusRaw || '-'
+    }));
+    exportToXLS(dataToExport, 'Campanhas');
+  };
 
   const hemocentros = Array.isArray(hemocentrosData) ? hemocentrosData : [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -186,13 +223,45 @@ export const AdminCampanhas: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('admin.campanhas.title')}</h1>
-          <p className="text-gray-600 mt-1">{t('admin.campanhas.subtitle')}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('admin.campanhas.title')}</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">{t('admin.campanhas.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={handleNew}>{t('admin.campanhas.new_button')}</Button>
       </div>
+
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'tipoSangue',
+            label: 'Todos os Tipos',
+            options: [
+              { value: 'A+', label: 'A+' },
+              { value: 'A-', label: 'A-' },
+              { value: 'B+', label: 'B+' },
+              { value: 'B-', label: 'B-' },
+              { value: 'AB+', label: 'AB+' },
+              { value: 'AB-', label: 'AB-' },
+              { value: 'O+', label: 'O+' },
+              { value: 'O-', label: 'O-' },
+            ]
+          },
+          {
+            key: 'status',
+            label: 'Todos os Estados',
+            options: [
+              { value: 'ativo', label: 'Ativa' },
+              { value: 'inativo', label: 'Inativa' }
+            ]
+          }
+        ]}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
@@ -209,7 +278,7 @@ export const AdminCampanhas: React.FC = () => {
             <p className="text-gray-600">{t('admin.campanhas.empty_subtitle')}</p>
           </div>
         ) : (
-          campanhas.map((camp) => (
+          paginatedCampanhas.map((camp) => (
             <Card key={camp.id} className="relative">
               {/* Status Badge */}
               <div className="absolute top-4 right-4">
@@ -342,6 +411,18 @@ export const AdminCampanhas: React.FC = () => {
           ))
         )}
       </div>
+
+      {filtered.length > 0 && (
+        <div className="mt-6">
+          <Pagination
+            totalItems={filtered.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
+        </div>
+      )}
     </div>
   );
 };

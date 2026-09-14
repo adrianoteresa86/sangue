@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { Heart, Clock, CheckCircle, XCircle, RefreshCw, Filter, Search, Calendar, MapPin, FlaskConical, AlertTriangle, X, Ban } from 'lucide-react';
+import { Heart, Clock, CheckCircle, XCircle, RefreshCw, Calendar, MapPin, FlaskConical, AlertTriangle, X, Ban } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
-import { Input } from '../../components/common/Input';
-import { Select } from '../../components/common/Select';
 import { TriagemModal } from '../../components/admin/TriagemModal';
 import { HistoricoModal } from '../../components/admin/HistoricoModal';
 import { BotaoExportarPDF } from '../../components/admin/BotaoExportarPDF';
 import { gerarRelatorioPDF, intervaloPeriodo, type Periodo } from '../../utilitarios/gerarPDF';
+import { Pagination } from '../../components/common/Pagination';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 import api from '../../services/api';
 
 interface AgendamentoDoacao {
@@ -36,10 +36,12 @@ function formatDate(iso: string) {
 export const Agendamentos = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [triagemAgendamento, setTriagemAgendamento] = useState<AgendamentoDoacao | null>(null);
   const [historicoAgendamento, setHistoricoAgendamento] = useState<AgendamentoDoacao | null>(null);
   const [confirmacao, setConfirmacao] = useState<{ agendamento: AgendamentoDoacao; status: 'APPROVED' | 'CANCELLED' } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
@@ -151,9 +153,29 @@ export const Agendamentos = () => {
       a.hemocentro.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (a.tipoSangue ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (a.hemocentro.cidade ?? '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStatus = statusFilter === 'all' || a.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchStatus = !filterValues.status || a.status === filterValues.status;
+    const matchTipo = !filterValues.tipoSangue || a.tipoSangue === filterValues.tipoSangue;
+    return matchSearch && matchStatus && matchTipo;
   });
+
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filtered.map((a: any) => ({
+      'Doador': a.usuario?.nome || '-',
+      'Hemocentro': a.hemocentro?.nome || '-',
+      'Data Preferida': a.dataPreferida ? formatDate(a.dataPreferida) : '-',
+      'Hora Preferida': a.horaPreferida || '-',
+      'Tipo Sanguíneo': a.tipoSangue || '-',
+      'Status': STATUS_CONFIG[a.status]?.label || a.status
+    }));
+    exportToXLS(dataToExport, 'Agendamentos');
+  };
 
   const handleStatus = (agendamento: AgendamentoDoacao, status: 'APPROVED' | 'CANCELLED') => {
     setConfirmacao({ agendamento, status });
@@ -192,7 +214,7 @@ export const Agendamentos = () => {
           <Heart className="w-8 h-8 text-red-500" />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{t('admin.agendamentos.title')}</h1>
-            <p className="text-gray-600 mt-1">{t('admin.agendamentos.subtitle')}</p>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">{t('admin.agendamentos.subtitle')}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -274,25 +296,17 @@ export const Agendamentos = () => {
         </Card>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <Input
-            type="text"
-            placeholder={t('admin.agendamentos.search_placeholder')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            options={[
-              { value: 'all',          label: 'Todos' },
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'status',
+            label: 'Todos os Estados',
+            options: [
               { value: 'PENDING',      label: 'Pendente' },
               { value: 'APPROVED',     label: 'Aprovado' },
               { value: 'IN_PROCESSING',label: 'Em Processamento' },
@@ -300,11 +314,24 @@ export const Agendamentos = () => {
               { value: 'REFUSED',      label: 'Recusado' },
               { value: 'CANCELLED',             label: 'Cancelado' },
               { value: 'RESCHEDULE_REQUESTED',  label: 'Reagendamento Solicitado' },
-            ]}
-            className="pl-10"
-          />
-        </div>
-      </div>
+            ]
+          },
+          {
+            key: 'tipoSangue',
+            label: 'Todos os Tipos',
+            options: [
+              { value: 'A+', label: 'A+' },
+              { value: 'A-', label: 'A-' },
+              { value: 'B+', label: 'B+' },
+              { value: 'B-', label: 'B-' },
+              { value: 'AB+', label: 'AB+' },
+              { value: 'AB-', label: 'AB-' },
+              { value: 'O+', label: 'O+' },
+              { value: 'O-', label: 'O-' },
+            ]
+          }
+        ]}
+      />
 
       {/* Tabela */}
       <Card className="overflow-hidden">
@@ -334,14 +361,14 @@ export const Agendamentos = () => {
                     <Heart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                     <p className="text-lg font-medium text-gray-900 mb-1">{t('admin.agendamentos.empty_title')}</p>
                     <p className="text-gray-500 text-sm">
-                      {searchTerm || statusFilter !== 'all'
+                      {searchTerm || Object.keys(filterValues).length > 0
                         ? t('admin.agendamentos.empty_adjust')
                         : t('admin.agendamentos.empty_default')}
                     </p>
                   </td>
                 </tr>
               ) : (
-                filtered.map((a) => {
+                paginatedData.map((a) => {
                   const cfg = STATUS_CONFIG[a.status] ?? STATUS_CONFIG.PENDING;
                   return (
                     <tr key={a.id} className="hover:bg-gray-50">
@@ -466,6 +493,14 @@ export const Agendamentos = () => {
             </tbody>
           </table>
         </div>
+        
+        <Pagination
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </Card>
 
       {triagemAgendamento && (

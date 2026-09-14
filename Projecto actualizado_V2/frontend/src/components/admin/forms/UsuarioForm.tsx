@@ -33,7 +33,7 @@ interface UsuarioFormProps {
   loading?: boolean;
   title: string;
   onCancel?: () => void;
-  hemocentros?: Array<{ id: string | number; nome: string }>;
+  hemocentros?: Array<{ id: string | number; nome: string; temCoordenador?: boolean }>;
 }
 
 export const UsuarioForm: React.FC<UsuarioFormProps> = ({
@@ -56,6 +56,10 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
   });
 
   const perfilSelecionado = watch('perfil');
+
+  const hemocentrosFiltrados = perfilSelecionado === 'COORDENADOR_HEMOCENTRO'
+    ? hemocentros.filter(h => !h.temCoordenador || String(h.id) === String(initialData?.hemocentroId))
+    : hemocentros;
 
   useEffect(() => {
     reset(initialData || {});
@@ -239,7 +243,7 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="">Selecione um hemocentro</option>
-                {hemocentros.map((h) => (
+                {hemocentrosFiltrados.map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.nome}
                   </option>

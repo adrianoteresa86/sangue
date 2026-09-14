@@ -37,7 +37,7 @@ const MENSAGEM_STATUS: Record<StatusTransfusao, { titulo: string; mensagem: (pro
 const roteador = Router();
 
 // GET /api/v1/pedidos-transfusao
-roteador.get('/', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.COORDENADOR_HEMOCENTRO, PerfilUsuario.TECNICO_HEMOCENTRO), async (req: Request, res: Response) => {
+roteador.get('/', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR_HEMOCENTRO, PerfilUsuario.TECNICO_HEMOCENTRO), async (req: Request, res: Response) => {
   /* #swagger.tags = ['Pedidos de Transfusão']
      #swagger.summary = 'Listar todos os pedidos de transfusão'
      #swagger.security = [{ "bearerAuth": [] }]

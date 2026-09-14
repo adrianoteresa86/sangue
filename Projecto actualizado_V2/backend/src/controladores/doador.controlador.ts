@@ -12,10 +12,10 @@ const roteador = Router();
 const repositorioPerfilDoador = () => FonteDados.getRepository(PerfilDoador);
 const repositorioUsuario = () => FonteDados.getRepository(Usuario);
 
-// GET /api/v1/doadores - ADMIN: listar todos os doadores
-roteador.get('/', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.ADMIN), async (_req: Request, res: Response) => {
+// GET /api/v1/doadores - ADMIN, COORDENADOR_HEMOCENTRO, TECNICO_HEMOCENTRO
+roteador.get('/', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR_HEMOCENTRO, PerfilUsuario.TECNICO_HEMOCENTRO), async (_req: Request, res: Response) => {
   /* #swagger.tags = ['Doadores']
-     #swagger.summary = 'Listar todos os doadores (ADMIN)'
+     #swagger.summary = 'Listar todos os doadores (ADMIN e Hemocentro)'
      #swagger.security = [{ "bearerAuth": [] }]
   */
   try {

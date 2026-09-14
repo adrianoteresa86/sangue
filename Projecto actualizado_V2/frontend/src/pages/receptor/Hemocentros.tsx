@@ -45,10 +45,10 @@ export const ReceptorHemocentros: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('receptor.hemocentros.title')}</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('receptor.hemocentros.title')}</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             {hemocentros.length !== 1
               ? t('receptor.hemocentros.units_active_plural', { count: hemocentros.length })
               : t('receptor.hemocentros.units_active_single', { count: hemocentros.length })}

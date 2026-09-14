@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '../../components/common/Card';
 import { toast } from 'sonner';
+import { Pagination } from '../../components/common/Pagination';
 import { Hourglass, CheckCircle, Microscope, CheckCircle2, Ban, XCircle, CalendarClock, Droplets, CalendarDays, ArrowRight } from 'lucide-react';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 import api from '../../services/api';
 
 interface Agendamento {
@@ -33,7 +35,9 @@ export const DoadorHistorico: React.FC = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [reagendar, setReagendar] = useState<ReagendarDados | null>(null);
 
   const reagendarMutation = useMutation({
@@ -81,15 +85,34 @@ export const DoadorHistorico: React.FC = () => {
       (a.hemocentro?.nome ?? '').toLowerCase().includes(termo) ||
       (a.tipoSangue ?? '').toLowerCase().includes(termo) ||
       formatDate(a.dataPreferida).toLowerCase().includes(termo);
-    const matchStatus = statusFilter === 'all' || a.status === statusFilter;
+    const matchStatus = !filterValues.status || a.status === filterValues.status;
     return matchSearch && matchStatus;
   });
+
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filtered.map((a: any) => ({
+      'Data Preferida': a.dataPreferida ? formatDate(a.dataPreferida) : '-',
+      'Hora Preferida': a.horaPreferida || '-',
+      'Tipo Sanguíneo': a.tipoSangue || '-',
+      'Hemocentro': a.hemocentro?.nome || '-',
+      'Status': STATUS_CONFIG[a.status]?.label || a.status,
+      'Observações': a.observacoes || '-'
+    }));
+    exportToXLS(dataToExport, 'Historico_Doacoes');
+  };
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">{t('doador.historico.title')}</h1>
-        <p className="text-gray-600 mt-1">{t('doador.historico.subtitle')}</p>
+        <p className="text-sm sm:text-base text-gray-600 mt-1">{t('doador.historico.subtitle')}</p>
       </div>
 
       {/* Stats */}
@@ -107,26 +130,28 @@ export const DoadorHistorico: React.FC = () => {
         ))}
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="text"
-          placeholder={t('doador.historico.search_placeholder')}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white"
-        >
-          <option value="all">{t('doador.historico.filter_all')}</option>
-          <option value="PENDING">{t('doador.historico.filter_pending')}</option>
-          <option value="COMPLETED">{t('doador.historico.filter_completed')}</option>
-          <option value="CANCELLED">{t('doador.historico.filter_cancelled')}</option>
-        </select>
-      </div>
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'status',
+            label: 'Todos os Estados',
+            options: [
+              { value: 'PENDING',      label: 'Pendente' },
+              { value: 'APPROVED',     label: 'Aprovado' },
+              { value: 'IN_PROCESSING',label: 'Em Processamento' },
+              { value: 'COMPLETED',    label: 'Concluído' },
+              { value: 'REFUSED',      label: 'Recusado' },
+              { value: 'CANCELLED',             label: 'Cancelado' },
+              { value: 'RESCHEDULE_REQUESTED',  label: 'Reagendamento Solicitado' },
+            ]
+          }
+        ]}
+      />
 
       {/* Conteúdo */}
       {isLoading && (
@@ -168,17 +193,17 @@ export const DoadorHistorico: React.FC = () => {
                     <td colSpan={7} className="py-14 text-center">
                       <Droplets className="w-10 h-10 mx-auto mb-3 text-red-500" />
                       <p className="font-medium text-gray-700">
-                        {searchTerm || statusFilter !== 'all'
+                        {searchTerm || Object.keys(filterValues).length > 0
                           ? t('doador.historico.empty_filtered')
                           : t('doador.historico.empty_all')}
                       </p>
-                      {!searchTerm && statusFilter === 'all' && (
+                      {!searchTerm && Object.keys(filterValues).length === 0 && (
                         <p className="text-gray-400 text-sm mt-1">{t('doador.historico.empty_hint')}</p>
                       )}
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((a) => {
+                  paginatedData.map((a) => {
                     const cfg = STATUS_CONFIG[a.status] ?? { label: a.status, bg: '#f3f4f6', color: '#6b7280', icon: '•' };
                     return (
                       <tr key={a.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -240,11 +265,15 @@ export const DoadorHistorico: React.FC = () => {
           </div>
 
           {filtered.length > 0 && (
-            <p className="text-xs text-gray-400 px-4 py-3 border-t border-gray-100">
-              {filtered.length !== 1
-                ? t('doador.historico.records_found_plural', { count: filtered.length })
-                : t('doador.historico.records_found', { count: filtered.length })}
-            </p>
+            <div className="border-t border-gray-100">
+              <Pagination
+                totalItems={filtered.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+              />
+            </div>
           )}
         </Card>
       )}

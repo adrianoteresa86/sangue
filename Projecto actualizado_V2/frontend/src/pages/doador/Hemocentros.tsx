@@ -27,7 +27,7 @@ export const DoadorHemocentros: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">{t('doador.hemocentros.title')}</h1>
-        <p className="text-gray-600 mt-1">{t('doador.hemocentros.subtitle')}</p>
+        <p className="text-sm sm:text-base text-gray-600 mt-1">{t('doador.hemocentros.subtitle')}</p>
       </div>
 
       {/* Campo de Busca */}

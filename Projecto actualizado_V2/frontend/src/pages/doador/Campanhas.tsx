@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { DateInput } from '../../components/common/DateInput';
+import { Pagination } from '../../components/common/Pagination';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 import api from '../../services/api';
 
 const formatDate = (value: string | null | undefined) => {
@@ -37,6 +39,9 @@ interface ModalState {
 export const DoadorCampanhas: React.FC = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [modal, setModal] = useState<ModalState | null>(null);
   const { data: campanhasData, isLoading, error } = useQuery({
     queryKey: ['campanhas'],
@@ -67,11 +72,35 @@ export const DoadorCampanhas: React.FC = () => {
     },
   });
 
-  const filteredCampanhas = campanhasData?.filter((camp: any) =>
-    camp.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    camp.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    camp.hemocentro?.nome?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredCampanhas = campanhasData?.filter((camp: any) => {
+    const matchesSearch = camp.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          camp.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          camp.hemocentro?.nome?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = !filterValues.status || (filterValues.status === 'ativo' ? camp.ativo : !camp.ativo);
+
+    return matchesSearch && matchesStatus;
+  }) || [];
+
+  const paginatedCampanhas = filteredCampanhas.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filteredCampanhas.map((c: any) => ({
+      'Título': c.titulo || '-',
+      'Descrição': c.descricao || '-',
+      'Hemocentro': c.hemocentro?.nome || '-',
+      'Data Início': c.dataInicio ? formatDate(c.dataInicio) : '-',
+      'Data Fim': c.dataFim ? formatDate(c.dataFim) : '-',
+      'Doações': `${c.doacoesAtuais || 0} / ${c.metaDoacoes || 0}`,
+      'Progresso': `${calcProgress(c.doacoesAtuais, c.metaDoacoes)}%`
+    }));
+    exportToXLS(dataToExport, 'Campanhas');
+  };
 
   const openModal = (camp: any) => {
     if (temPedidoPendente) {
@@ -100,19 +129,26 @@ export const DoadorCampanhas: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">{t('doador.campanhas.title')}</h1>
-        <p className="text-gray-600 mt-1">{t('doador.campanhas.subtitle')}</p>
+        <p className="text-sm sm:text-base text-gray-600 mt-1">{t('doador.campanhas.subtitle')}</p>
       </div>
 
-      {/* Campo de Busca */}
-      <div className="mb-6">
-        <input
-          type="text"
-          placeholder={t('doador.campanhas.search_placeholder')}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'status',
+            label: 'Todos os Estados',
+            options: [
+              { value: 'ativo', label: 'Ativa' },
+              { value: 'inativo', label: 'Inativa' }
+            ]
+          }
+        ]}
+      />
 
       {/* Loading */}
       {isLoading && (
@@ -138,7 +174,7 @@ export const DoadorCampanhas: React.FC = () => {
 
       {/* Lista de Campanhas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {filteredCampanhas.map((camp: any) => {
+        {paginatedCampanhas.map((camp: any) => {
           const progress = calcProgress(camp.doacoesAtuais, camp.metaDoacoes);
           const description = camp.hemocentro?.nome
             ? `${camp.hemocentro.nome} - ${camp.descricao}`
@@ -169,6 +205,16 @@ export const DoadorCampanhas: React.FC = () => {
           );
         })}
       </div>
+
+      {!isLoading && !error && filteredCampanhas.length > 0 && (
+        <Pagination
+          totalItems={filteredCampanhas.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
+      )}
 
       {/* Modal de Agendamento */}
       {modal && (

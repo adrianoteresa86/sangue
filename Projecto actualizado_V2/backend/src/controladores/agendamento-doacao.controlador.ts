@@ -12,8 +12,8 @@ import { Usuario } from '../entidades/Usuario';
 
 const roteador = Router();
 
-// GET /api/v1/agendamentos-doacao - ADMIN
-roteador.get('/', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.COORDENADOR_HEMOCENTRO, PerfilUsuario.TECNICO_HEMOCENTRO), async (req, res: Response) => {
+// GET /api/v1/agendamentos-doacao - ADMIN, COORDENADOR, TECNICO
+roteador.get('/', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR_HEMOCENTRO, PerfilUsuario.TECNICO_HEMOCENTRO), async (req, res: Response) => {
   /* #swagger.tags = ['Agendamentos de Doação']
      #swagger.summary = 'Listar todos os agendamentos'
      #swagger.security = [{ "bearerAuth": [] }]

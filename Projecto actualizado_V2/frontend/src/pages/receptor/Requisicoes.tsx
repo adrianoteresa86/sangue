@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
+import { Pagination } from '../../components/common/Pagination';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 import { ClipboardList } from 'lucide-react';
 import api from '../../services/api';
 import type { PedidoReceptor } from '../../types';
@@ -33,6 +35,10 @@ export const ReceptorRequisicoes: React.FC = () => {
   const queryClient = useQueryClient();
   const [cancelandoId, setCancelandoId] = useState<number | null>(null);
   const [erroCancel, setErroCancel] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const STATUS_LABEL: Record<string, string> = {
     PENDING: 'Pendente',
@@ -75,6 +81,32 @@ export const ReceptorRequisicoes: React.FC = () => {
     }
   };
 
+  const filteredPedidos = pedidos.filter(p => {
+    const matchesSearch = p.tipoSanguinePaciente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          p.diagnostico?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = !filterValues.status || p.status === filterValues.status;
+    const matchesUrgencia = !filterValues.urgencia || String(p.nivelUrgencia) === filterValues.urgencia;
+
+    return matchesSearch && matchesStatus && matchesUrgencia;
+  });
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filteredPedidos.map((p: any) => ({
+      'Data': formatDate(p.criadoEm),
+      'Tipo Sanguíneo': p.tipoSanguinePaciente || '-',
+      'Volume (mL)': p.quantidadeSolicitada || '-',
+      'Urgência': URGENCIA_LABEL[p.nivelUrgencia] || `Nível ${p.nivelUrgencia}`,
+      'Motivo': p.diagnostico || '-',
+      'Status': STATUS_LABEL[p.status] || p.status
+    }));
+    exportToXLS(dataToExport, 'Requisicoes');
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -93,10 +125,10 @@ export const ReceptorRequisicoes: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('receptor.requisicoes.title')}</h1>
-          <p className="text-gray-600 mt-1">{t('receptor.requisicoes.subtitle')}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('receptor.requisicoes.title')}</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">{t('receptor.requisicoes.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={() => navigate('/receptor/transfusao')}>
           {t('receptor.requisicoes.new_button')}
@@ -108,6 +140,37 @@ export const ReceptorRequisicoes: React.FC = () => {
           {erroCancel}
         </div>
       )}
+
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'status',
+            label: 'Todos os Estados',
+            options: [
+              { value: 'PENDING', label: 'Pendente' },
+              { value: 'APPROVED', label: 'Aprovada' },
+              { value: 'IN_PROGRESS', label: 'Em Andamento' },
+              { value: 'COMPLETED', label: 'Concluída' },
+              { value: 'CANCELLED', label: 'Cancelada' },
+            ]
+          },
+          {
+            key: 'urgencia',
+            label: 'Todas Urgências',
+            options: [
+              { value: '1', label: 'Baixa' },
+              { value: '2', label: 'Média' },
+              { value: '3', label: 'Alta' },
+              { value: '4', label: 'Crítica' },
+            ]
+          }
+        ]}
+      />
 
       <Card>
         {pedidos.length === 0 ? (
@@ -138,7 +201,7 @@ export const ReceptorRequisicoes: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {pedidos.map((p) => (
+                {filteredPedidos.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((p) => (
                   <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 whitespace-nowrap">{formatDate(p.criadoEm)}</td>
                     <td className="py-3 px-4">
@@ -191,6 +254,14 @@ export const ReceptorRequisicoes: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            
+            <Pagination
+              totalItems={filteredPedidos.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+            />
           </div>
         )}
       </Card>

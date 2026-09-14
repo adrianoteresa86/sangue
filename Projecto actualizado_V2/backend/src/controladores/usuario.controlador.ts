@@ -26,7 +26,10 @@ const paraUsuarioSeguro = (u: Usuario) => ({
   perfil: u.perfil ?? 'DOADOR',
   ativo: u.ativo,
   criadoEm: u.criadoEm ?? null,
-  perfilHemocentro: u.perfilHemocentro ? { hemocentroId: u.perfilHemocentro.hemocentro.id } : undefined,
+  perfilHemocentro: u.perfilHemocentro && u.perfilHemocentro.hemocentro ? { 
+    hemocentroId: u.perfilHemocentro.hemocentro.id,
+    hemocentroNome: u.perfilHemocentro.hemocentro.nome
+  } : undefined,
 });
 
 // GET /api/v1/usuarios - ADMIN e COORDENADOR_HEMOCENTRO
@@ -44,6 +47,8 @@ roteador.get('/', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.ADMIN, P
     const where: any = {};
     if (usuarioLogado?.perfil === PerfilUsuario.COORDENADOR_HEMOCENTRO) {
       where.perfilHemocentro = { hemocentro: { id: usuarioLogado.hemocentroId } };
+    } else if (req.query.hemocentroId) {
+      where.perfilHemocentro = { hemocentro: { id: Number(req.query.hemocentroId) } };
     }
 
     let [utilizadores, total] = await repositorioUsuario().findAndCount({
@@ -404,6 +409,9 @@ roteador.delete('/:id', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.AD
       }
     }
 
+    if (usuario.perfilHemocentro) {
+      await repositorioPerfilHemocentro().remove(usuario.perfilHemocentro);
+    }
     await repositorioUsuario().softRemove(usuario);
     res.json({ mensagem: 'Utilizador eliminado com sucesso' });
   } catch (erro: any) {

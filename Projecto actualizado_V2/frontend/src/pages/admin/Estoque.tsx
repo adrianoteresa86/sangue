@@ -5,19 +5,19 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { EstoqueSangueForm } from '../../components/admin/forms';
-import { Plus, AlertTriangle, CheckCircle, TrendingUp, Search, Edit, Trash2, Filter } from 'lucide-react';
-import { Input } from '../../components/common/Input';
+import { Plus, AlertTriangle, CheckCircle, TrendingUp, Search, Edit, Trash2 } from 'lucide-react';
+import { Pagination } from '../../components/common/Pagination';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 import api from '../../services/api';
 
 export const AdminEstoque: React.FC = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'tipo' | 'componente' | 'hemocentro'>('tipo');
-  const [selectedTipo, setSelectedTipo] = useState('all');
-  const [selectedComponente, setSelectedComponente] = useState('all');
-  const [selectedHemocentro, setSelectedHemocentro] = useState('all');
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
   const [editingEstoque, setEditingEstoque] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const { data: estoqueData, isLoading: loadingEstoque, refetch } = useQuery({
     queryKey: ['estoque'],
@@ -91,7 +91,7 @@ export const AdminEstoque: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900">
               {editingEstoque ? t('admin.estoque.edit_title') : t('admin.estoque.add_title')}
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
               {editingEstoque ? t('admin.estoque.edit_subtitle') : t('admin.estoque.add_subtitle')}
             </p>
           </div>
@@ -113,15 +113,34 @@ export const AdminEstoque: React.FC = () => {
     const matchesSearch = item.tipoSangue?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.tipoComponente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.hemocentro?.nome?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTipo = selectedTipo === 'all' || item.tipoSangue === selectedTipo;
-    const matchesComponente = selectedComponente === 'all' || item.tipoComponente === selectedComponente;
-    const matchesHemocentro = selectedHemocentro === 'all' || item.hemocentro?.nome === selectedHemocentro;
+    const matchesTipo = !filterValues.tipo || item.tipoSangue === filterValues.tipo;
+    const matchesComponente = !filterValues.componente || item.tipoComponente === filterValues.componente;
+    const matchesHemocentro = !filterValues.hemocentro || item.hemocentro?.nome === filterValues.hemocentro;
     return matchesSearch && matchesTipo && matchesComponente && matchesHemocentro;
   });
 
-  const estoqueAdequado = filtered.filter(item => item.status === 'Adequado');
-  const estoqueBaixo = filtered.filter(item => item.status === 'Baixo');
-  const estoqueCritico = filtered.filter(item => item.status === 'Crítico');
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filtered.map((item: any) => ({
+      'Tipo Sanguíneo': item.tipoSangue || '-',
+      'Componente': item.tipoComponente || '-',
+      'Quantidade (mL)': item.quantidade || '-',
+      'Hemocentro': item.hemocentro?.nome || '-',
+      'Validade': item.dataValidade || '-',
+      'Status': item.status || '-'
+    }));
+    exportToXLS(dataToExport, 'Estoque_Sangue');
+  };
+
+  const estoqueAdequado = paginatedData.filter(item => item.status === 'Adequado');
+  const estoqueBaixo = paginatedData.filter(item => item.status === 'Baixo');
+  const estoqueCritico = paginatedData.filter(item => item.status === 'Crítico');
 
   const summary = {
     total: estoque.length,
@@ -210,116 +229,30 @@ export const AdminEstoque: React.FC = () => {
         </Card>
       </div>
 
-      {/* Tabs de Filtros */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="flex border-b border-gray-200">
-          {[
-            { key: 'tipo', label: t('admin.estoque.tab_types') },
-            { key: 'componente', label: t('admin.estoque.tab_components') },
-            { key: 'hemocentro', label: t('admin.estoque.tab_hemocentros') },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
-              className={`flex items-center gap-2 px-6 py-3 font-medium text-sm transition-colors ${
-                activeTab === tab.key
-                  ? 'text-primary border-b-2 border-primary bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="p-4">
-          {activeTab === 'tipo' && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedTipo('all')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedTipo === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {t('admin.estoque.all_button')}
-              </button>
-              {tiposSanguineos.map((tipo) => (
-                <button
-                  key={tipo}
-                  onClick={() => setSelectedTipo(tipo)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedTipo === tipo ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {tipo}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'componente' && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedComponente('all')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedComponente === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {t('admin.estoque.all_button')}
-              </button>
-              {componentes.map((componente) => (
-                <button
-                  key={componente}
-                  onClick={() => setSelectedComponente(componente)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedComponente === componente ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {componente}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'hemocentro' && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedHemocentro('all')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedHemocentro === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {t('admin.estoque.all_button')}
-              </button>
-              {hemocentroNomes.map((hemocentro) => (
-                <button
-                  key={hemocentro}
-                  onClick={() => setSelectedHemocentro(hemocentro)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedHemocentro === hemocentro ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {hemocentro}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="flex-1">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <Input
-            placeholder={t('admin.estoque.search_placeholder')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'tipo',
+            label: 'Todos os Tipos Sanguíneos',
+            options: tiposSanguineos.map(t => ({ value: t, label: t }))
+          },
+          {
+            key: 'componente',
+            label: 'Todos os Componentes',
+            options: componentes.map(c => ({ value: c, label: c }))
+          },
+          {
+            key: 'hemocentro',
+            label: 'Todos os Hemocentros',
+            options: hemocentroNomes.map(h => ({ value: h, label: h }))
+          }
+        ]}
+      />
 
       {/* Botão Adicionar */}
       <div className="flex justify-end">
@@ -558,6 +491,18 @@ export const AdminEstoque: React.FC = () => {
                 <p className="text-gray-600">{t('admin.estoque.empty_subtitle')}</p>
               </div>
             </Card>
+          )}
+          
+          {!loadingEstoque && filtered.length > 0 && (
+            <div className="bg-white rounded-lg shadow mt-6">
+              <Pagination
+                totalItems={filtered.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+              />
+            </div>
           )}
         </>
       )}

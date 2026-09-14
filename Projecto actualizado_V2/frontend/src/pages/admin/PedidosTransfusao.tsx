@@ -23,7 +23,8 @@ import {
   Clock,
   RefreshCw,
 } from 'lucide-react';
-import { Input } from '../../components/common/Input';
+import { Pagination } from '../../components/common/Pagination';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 import api from '../../services/api';
 
 const STATUS_CLASS: Record<string, string> = {
@@ -180,6 +181,9 @@ export const AdminPedidosTransfusao: React.FC = () => {
   const [detalhesPedido, setDetalhesPedido] = useState<any>(null);
   const [confirmacao, setConfirmacao] = useState<{ pedido: any; tipo: 'status' | 'delete'; novoStatus?: string } | null>(null);
   const [triagemPedido, setTriagemPedido] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
 
   const { data: pedidosData, isLoading: loadingPedidos, refetch } = useQuery({
     queryKey: ['pedidos-transfusao'],
@@ -310,8 +314,32 @@ export const AdminPedidosTransfusao: React.FC = () => {
       activeTab === 'em-andamento' ? p.status === 'IN_PROGRESS' :
       activeTab === 'concluidos' ? p.status === 'COMPLETED' : true;
 
-    return matchSearch && matchTab;
+    const matchUrgencia = !filterValues.urgencia || String(p.nivelUrgencia) === filterValues.urgencia;
+    const matchHemocentro = !filterValues.hemocentro || String(p.hemocentroId) === filterValues.hemocentro;
+
+    return matchSearch && matchTab && matchUrgencia && matchHemocentro;
   });
+
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filtered.map((p: any) => ({
+      'Paciente': p.nomePaciente || '-',
+      'Prontuário': p.numeroProntuario || '-',
+      'Tipo Sanguíneo': p.tipoSanguinePaciente ?? p.tipoSanguineoPaciente ?? '-',
+      'Componente': p.tipoComponente || '-',
+      'Quantidade (mL)': p.quantidadeSolicitada || '-',
+      'Urgência': getUrgencyLabel(p.nivelUrgencia) || '-',
+      'Hemocentro': p.hemocentro?.nome || '-',
+      'Status': getStatusLabel(p.status) || '-'
+    }));
+    exportToXLS(dataToExport, 'Pedidos_Transfusao');
+  };
 
   const stats = [
     { label: t('admin.pedidos_transfusao.stat_total'), value: pedidos.length, icon: <ClipboardList className="w-9 h-9 text-blue-500" />, color: 'bg-blue-50' },
@@ -331,9 +359,9 @@ export const AdminPedidosTransfusao: React.FC = () => {
   if (showForm) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               {editingPedido ? t('admin.pedidos_transfusao.edit_title') : t('admin.pedidos_transfusao.new_title')}
             </h1>
             <p className="text-gray-600">
@@ -413,11 +441,29 @@ export const AdminPedidosTransfusao: React.FC = () => {
         </nav>
       </div>
 
-      <Input
-        label={t('admin.pedidos_transfusao.search_label')}
-        placeholder={t('admin.pedidos_transfusao.search_placeholder')}
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'urgencia',
+            label: 'Todas as Urgências',
+            options: [
+              { value: '1', label: 'Baixa' },
+              { value: '2', label: 'Média' },
+              { value: '3', label: 'Alta' },
+              { value: '4', label: 'Crítica' }
+            ]
+          },
+          {
+            key: 'hemocentro',
+            label: 'Todos os Hemocentros',
+            options: hemocentros.map((h: any) => ({ value: String(h.id), label: h.nome }))
+          }
+        ]}
       />
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -458,7 +504,7 @@ export const AdminPedidosTransfusao: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filtered.map((pedido) => (
+                {paginatedData.map((pedido) => (
                   <tr key={pedido.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{pedido.nomePaciente}</div>
@@ -561,6 +607,16 @@ export const AdminPedidosTransfusao: React.FC = () => {
               </tbody>
             </table>
           </div>
+        )}
+        
+        {!loadingPedidos && filtered.length > 0 && (
+          <Pagination
+            totalItems={filtered.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
         )}
       </div>
       {confirmacao && (() => {

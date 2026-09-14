@@ -5,20 +5,61 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { HemocentroForm } from '../../components/admin/forms';
-import { Edit, Trash2, Power, PowerOff, Building, Clock } from 'lucide-react';
+import { Edit, Trash2, Power, PowerOff, Building, Clock, Users, X } from 'lucide-react';
+import { Pagination } from '../../components/common/Pagination';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 
 export const AdminHemocentros: React.FC = () => {
   const { t } = useTranslation();
+  const { usuario } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editingHemocentro, setEditingHemocentro] = useState<any>(null);
+  const [showUsersModal, setShowUsersModal] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const { data: hemocentrosData, isLoading: loadingHemocentros, refetch } = useQuery({
     queryKey: ['hemocentros'],
     queryFn: () => api.get('/hemocentros').then((res) => res.data),
   });
 
+  const { data: hemocentroUsersData, isLoading: loadingUsers } = useQuery({
+    queryKey: ['hemocentroUsers', showUsersModal],
+    queryFn: () => showUsersModal ? api.get(`/usuarios?hemocentroId=${showUsersModal}&limit=100`).then((res) => res.data.usuarios) : [],
+    enabled: !!showUsersModal,
+  });
+
   const hemocentros = Array.isArray(hemocentrosData) ? hemocentrosData : [];
+  const hemocentroUsers = Array.isArray(hemocentroUsersData) ? hemocentroUsersData : [];
+
+  const filtered = hemocentros.filter((hc: any) => {
+    const matchesSearch = (hc.nome || hc.name)?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = !filterValues.status || (filterValues.status === 'ativo' ? hc.ativo : !hc.ativo);
+    return matchesSearch && matchesStatus;
+  });
+
+  const paginatedHemocentros = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filtered.map((hc: any) => ({
+      Nome: hc.nome || hc.name || '-',
+      Endereço: hc.endereco || hc.address || '-',
+      Telefone: hc.telefone || hc.phone || '-',
+      Email: hc.email || '-',
+      Horário: hc.horarioFuncionamento || '-',
+      Status: hc.ativo ? 'Ativo' : 'Inativo'
+    }));
+    exportToXLS(dataToExport, 'Hemocentros');
+  };
 
   const createHemocentroMutation = useMutation({
     mutationFn: (data: any) => api.post('/hemocentros', data),
@@ -70,9 +111,9 @@ export const AdminHemocentros: React.FC = () => {
     try {
       await deleteHemocentro(hemocentroId);
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao excluir hemocentro:', error);
-      toast.error(t('admin.hemocentros.error_delete'));
+      toast.error(error.response?.data?.erro || t('admin.hemocentros.error_delete'));
     }
   };
 
@@ -112,7 +153,7 @@ export const AdminHemocentros: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900">
               {editingHemocentro ? t('admin.hemocentros.edit_title') : t('admin.hemocentros.new_title')}
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
               {editingHemocentro ? t('admin.hemocentros.edit_subtitle') : t('admin.hemocentros.new_subtitle')}
             </p>
           </div>
@@ -131,16 +172,34 @@ export const AdminHemocentros: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('admin.hemocentros.title')}</h1>
-          <p className="text-gray-600 mt-1">{t('admin.hemocentros.subtitle')}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('admin.hemocentros.title')}</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">{t('admin.hemocentros.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={handleNew} className="flex items-center gap-2">
           <Building className="w-4 h-4" />
           {t('admin.hemocentros.new_button')}
         </Button>
       </div>
+
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'status',
+            label: 'Todos os Estados',
+            options: [
+              { value: 'ativo', label: 'Ativo' },
+              { value: 'inativo', label: 'Inativo' }
+            ]
+          }
+        ]}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loadingHemocentros ? (
@@ -150,14 +209,14 @@ export const AdminHemocentros: React.FC = () => {
               <p>{t('admin.hemocentros.loading')}</p>
             </div>
           </div>
-        ) : hemocentros.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Building className="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">{t('admin.hemocentros.empty_title')}</h3>
             <p className="text-gray-600">{t('admin.hemocentros.empty_subtitle')}</p>
           </div>
         ) : (
-          hemocentros.map((hc) => (
+          paginatedHemocentros.map((hc) => (
             <Card key={hc.id} className="relative">
               {/* Status Badge */}
               <div className="absolute top-4 right-4">
@@ -269,12 +328,89 @@ export const AdminHemocentros: React.FC = () => {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  
+                  {(usuario?.perfil === 'ADMIN' || usuario?.perfil === 'COORDENADOR_HEMOCENTRO') && (
+                    <button
+                      title="Ver Usuários"
+                      className="flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors ml-auto"
+                      onClick={() => setShowUsersModal(hc.id)}
+                    >
+                      <Users className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </Card>
           ))
         )}
       </div>
+
+      {!loadingHemocentros && filtered.length > 0 && (
+        <div className="mt-6">
+          <Pagination
+            totalItems={filtered.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
+        </div>
+      )}
+
+      {showUsersModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Usuários do Hemocentro
+              </h2>
+              <button 
+                onClick={() => setShowUsersModal(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              {loadingUsers ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="w-8 h-8 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
+                </div>
+              ) : hemocentroUsers.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500">Nenhum usuário associado a este hemocentro.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {hemocentroUsers.map((u: any) => (
+                    <div key={u.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50">
+                      <div>
+                        <p className="font-medium text-gray-900">{u.nome}</p>
+                        <p className="text-sm text-gray-500">{u.email}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          u.perfil === 'COORDENADOR_HEMOCENTRO' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {u.perfil === 'COORDENADOR_HEMOCENTRO' ? 'Coordenador' : 'Técnico'}
+                        </span>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          u.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {u.ativo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -7,9 +7,9 @@ import { PerfilUsuario } from '../utilitarios/perfil-usuario.enum';
 const roteador = Router();
 
 // GET /api/v1/registros-doacao - ADMIN
-roteador.get('/', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.ADMIN), async (_req, res: Response) => {
+roteador.get('/', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR_HEMOCENTRO, PerfilUsuario.TECNICO_HEMOCENTRO), async (_req, res: Response) => {
   /* #swagger.tags = ['Registos de Doação']
-     #swagger.summary = 'Listar todos os registos de doação'
+     #swagger.summary = 'Listar todos os registos de doação (ADMIN e Hemocentro)'
      #swagger.security = [{ "bearerAuth": [] }]
   */
   try {

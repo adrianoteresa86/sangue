@@ -4,22 +4,24 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '../../services/api';
 import { Card } from '../../components/common/Card';
-import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { UsuarioForm } from '../../components/admin/forms';
 import { Edit, Trash2, Power, PowerOff } from 'lucide-react';
+import { Pagination } from '../../components/common/Pagination';
+import { DataTableToolbar, exportToXLS } from '../../components/common/DataTableToolbar';
 
 export const AdminUsuarios: React.FC = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
 
-  const { data: usuariosData = { usuarios: [], paginacao: { total: 0, page: 1, limit: 10, totalPages: 1 } }, isLoading: loadingUsuarios, refetch } = useQuery({
-    queryKey: ['usuarios', page, limit],
-    queryFn: () => api.get(`/usuarios?page=${page}&limit=${limit}`).then((res) => res.data),
+  const { data: usuariosData = { usuarios: [] }, isLoading: loadingUsuarios, refetch } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => api.get(`/usuarios?limit=10000`).then((res) => res.data),
   });
 
   const { data: hemocentrosData = { hemocentros: [] } } = useQuery({
@@ -28,13 +30,36 @@ export const AdminUsuarios: React.FC = () => {
   });
 
   const usuarios = Array.isArray(usuariosData.usuarios) ? usuariosData.usuarios : [];
-  const paginacao = usuariosData.paginacao;
-  const hemocentros = Array.isArray(hemocentrosData.hemocentros) ? hemocentrosData.hemocentros : [];
+  const hemocentros = Array.isArray(hemocentrosData) ? hemocentrosData : (Array.isArray(hemocentrosData.hemocentros) ? hemocentrosData.hemocentros : []);
 
-  const filtered = usuarios.filter((u: any) =>
-    u.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = usuarios.filter((u: any) => {
+    const matchesSearch = u.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          u.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPerfil = !filterValues.perfil || u.perfil === filterValues.perfil;
+    const matchesStatus = !filterValues.status || (filterValues.status === 'ativo' ? u.ativo : !u.ativo);
+    return matchesSearch && matchesPerfil && matchesStatus;
+  });
+  
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    const dataToExport = filtered.map((u: any) => ({
+      Nome: u.nome,
+      Email: u.email,
+      Telefone: u.telefone || '-',
+      'Tipo Sanguíneo': u.tipoSangue || '-',
+      Província: u.provincia || '-',
+      Hemocentro: u.perfilHemocentro?.hemocentroNome || '-',
+      Perfil: u.perfil,
+      Status: u.ativo ? 'Ativo' : 'Inativo'
+    }));
+    exportToXLS(dataToExport, 'Utilizadores');
+  };
 
   const createUsuarioMutation = useMutation({
     mutationFn: (data: any) => api.post('/usuarios/adicionar', data),
@@ -77,7 +102,10 @@ export const AdminUsuarios: React.FC = () => {
   };
 
   const handleEdit = (user: any) => {
-    setEditingUser(user);
+    setEditingUser({
+      ...user,
+      hemocentroId: user.perfilHemocentro?.hemocentroId
+    });
     setShowForm(true);
   };
 
@@ -123,7 +151,7 @@ export const AdminUsuarios: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900">
               {editingUser ? t('admin.usuarios.edit_title') : t('admin.usuarios.new_title')}
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
               {editingUser ? t('admin.usuarios.edit_subtitle') : t('admin.usuarios.new_subtitle')}
             </p>
           </div>
@@ -143,19 +171,40 @@ export const AdminUsuarios: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('admin.usuarios.title')}</h1>
-          <p className="text-gray-600 mt-1">{t('admin.usuarios.subtitle')}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('admin.usuarios.title')}</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">{t('admin.usuarios.subtitle')}</p>
         </div>
-        <Button variant="primary" onClick={handleNew}>{t('admin.usuarios.new_button')}</Button>
+        <Button variant="primary" onClick={handleNew} className="w-full sm:w-auto">{t('admin.usuarios.new_button')}</Button>
       </div>
 
-      <Input
-        label={t('admin.usuarios.search_label')}
-        placeholder={t('admin.usuarios.search_placeholder')}
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+      <DataTableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValues={filterValues}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        filters={[
+          {
+            key: 'perfil',
+            label: 'Todos os Perfis',
+            options: [
+              { value: 'ADMIN', label: 'Admin' },
+              { value: 'DOADOR', label: 'Doador' },
+              { value: 'RECEPTOR', label: 'Receptor' },
+              { value: 'COORDENADOR', label: 'Coordenador' }
+            ]
+          },
+          {
+            key: 'status',
+            label: 'Todos os Estados',
+            options: [
+              { value: 'ativo', label: 'Ativo' },
+              { value: 'inativo', label: 'Inativo' }
+            ]
+          }
+        ]}
       />
 
       <Card>
@@ -173,13 +222,14 @@ export const AdminUsuarios: React.FC = () => {
                   <th className="text-left py-3 px-4 font-semibold">{t('admin.usuarios.col_phone')}</th>
                   <th className="text-left py-3 px-4 font-semibold">{t('admin.usuarios.col_blood_type')}</th>
                   <th className="text-left py-3 px-4 font-semibold">{t('admin.usuarios.col_province')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">Hemocentro</th>
                   <th className="text-left py-3 px-4 font-semibold">{t('admin.usuarios.col_profile')}</th>
                   <th className="text-left py-3 px-4 font-semibold">{t('admin.usuarios.col_status')}</th>
                   <th className="text-left py-3 px-4 font-semibold">{t('admin.usuarios.col_actions')}</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((user: any) => (
+                {paginatedData.map((user: any) => (
                   <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 font-medium">{user.nome}</td>
                     <td className="py-3 px-4 text-gray-600">{user.email}</td>
@@ -194,6 +244,13 @@ export const AdminUsuarios: React.FC = () => {
                       )}
                     </td>
                     <td className="py-3 px-4 text-gray-600">{user.provincia || '-'}</td>
+                    <td className="py-3 px-4 text-gray-600">
+                      {user.perfilHemocentro?.hemocentroNome ? (
+                        <span className="text-sm">{user.perfilHemocentro.hemocentroNome}</span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         user.perfil === 'ADMIN' ? 'bg-red-100 text-primary' :
@@ -249,30 +306,14 @@ export const AdminUsuarios: React.FC = () => {
               </tbody>
             </table>
             
-            {paginacao && paginacao.totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 sm:px-6">
-                <div className="flex items-center justify-between w-full">
-                  <div className="text-sm text-gray-700">
-                    Mostrando <span className="font-medium">{((paginacao.page - 1) * paginacao.limit) + 1}</span> até <span className="font-medium">{Math.min(paginacao.page * paginacao.limit, paginacao.total)}</span> de <span className="font-medium">{paginacao.total}</span> resultados
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="secondary" 
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={paginacao.page === 1}
-                    >
-                      Anterior
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      onClick={() => setPage(p => Math.min(paginacao.totalPages, p + 1))}
-                      disabled={paginacao.page === paginacao.totalPages}
-                    >
-                      Próxima
-                    </Button>
-                  </div>
-                </div>
-              </div>
+            {!loadingUsuarios && filtered.length > 0 && (
+              <Pagination
+                totalItems={filtered.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+              />
             )}
           </div>
         )}

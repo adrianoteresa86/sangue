@@ -43,7 +43,10 @@ export const Login: React.FC = () => {
   useEffect(() => {
     if (usuario) {
       switch (usuario.perfil) {
-        case 'ADMIN': navigate('/admin'); break;
+        case 'ADMIN': 
+        case 'COORDENADOR_HEMOCENTRO':
+        case 'TECNICO_HEMOCENTRO':
+          navigate('/admin'); break;
         case 'DOADOR': navigate('/doador'); break;
         case 'RECEPTOR': navigate('/receptor'); break;
         default: navigate('/doador');

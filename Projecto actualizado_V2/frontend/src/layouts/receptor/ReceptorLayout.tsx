@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import {
   AlertOctagon, BarChart2, Bell, Building2, ChevronDown, ChevronLeft,
-  ChevronRight, ChevronUp, ClipboardList, Droplets, Home, LogOut, User,
+  ChevronRight, ChevronUp, ClipboardList, Droplets, Home, LogOut, User, Menu, X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -47,6 +47,7 @@ export const ReceptorLayout = ({ children }: ReceptorLayoutProps) => {
   const navigate = useNavigate();
   const agora = useRelogio();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [emergencyActive, setEmergencyActive] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -100,19 +101,40 @@ export const ReceptorLayout = ({ children }: ReceptorLayoutProps) => {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Overlay Mobile */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       <aside
-        className={`${sidebarOpen ? 'w-64' : 'w-20'} text-white transition-all duration-300 flex flex-col shadow-xl shrink-0`}
+        className={`
+          fixed inset-y-0 left-0 z-50 flex flex-col text-white transition-all duration-300 shadow-xl
+          md:relative md:translate-x-0
+          ${mobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'}
+          ${sidebarOpen ? 'md:w-64' : 'md:w-20'}
+        `}
         style={{ background: SIDEBAR_GRADIENT }}
       >
-        <div className="p-6 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
-          <Building2 className="w-7 h-7 shrink-0" />
-          {sidebarOpen && (
-            <div>
-              <h1 className="font-bold text-xl leading-tight">DoarFazBem</h1>
-              <p className="text-xs text-red-300 mt-0.5">{t('layout_receptor.sidebar_subtitle')}</p>
-            </div>
-          )}
+        <div className="p-6 flex items-center justify-between gap-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
+          <div className="flex items-center gap-2">
+            <Building2 className="w-7 h-7 shrink-0" />
+            {(sidebarOpen || mobileMenuOpen) && (
+              <div>
+                <h1 className="font-bold text-xl leading-tight">DoarFazBem</h1>
+                <p className="text-xs text-red-300 mt-0.5">{t('layout_receptor.sidebar_subtitle')}</p>
+              </div>
+            )}
+          </div>
+          <button 
+            className="md:hidden text-white/75 hover:text-white" 
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
@@ -128,6 +150,7 @@ export const ReceptorLayout = ({ children }: ReceptorLayoutProps) => {
                   <NavLink
                     key={item.href}
                     to={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
                     className={({ isActive }) =>
                       `relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors text-sm ${
                         isActive
@@ -137,7 +160,7 @@ export const ReceptorLayout = ({ children }: ReceptorLayoutProps) => {
                     }
                   >
                     {item.icon}
-                    {sidebarOpen && (
+                    {(sidebarOpen || mobileMenuOpen) && (
                       <span className="flex-1 flex items-center justify-between">
                         <span>{item.label}</span>
                         {item.badge > 0 && (
@@ -147,7 +170,7 @@ export const ReceptorLayout = ({ children }: ReceptorLayoutProps) => {
                         )}
                       </span>
                     )}
-                    {!sidebarOpen && item.badge > 0 && (
+                    {!(sidebarOpen || mobileMenuOpen) && item.badge > 0 && (
                       <span className="absolute top-1 right-1 bg-yellow-400 text-gray-900 text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
                         {item.badge > 9 ? '9+' : item.badge}
                       </span>
@@ -169,33 +192,43 @@ export const ReceptorLayout = ({ children }: ReceptorLayoutProps) => {
             }`}
           >
             <AlertOctagon className="w-4 h-4 shrink-0" />
-            {sidebarOpen && <span>{emergencyActive ? t('layout_receptor.emergency_active') : t('layout_receptor.emergency_activate')}</span>}
+            {(sidebarOpen || mobileMenuOpen) && <span>{emergencyActive ? t('layout_receptor.emergency_active') : t('layout_receptor.emergency_activate')}</span>}
           </button>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl hover:bg-white/10 transition-colors text-sm text-white/75 hover:text-white"
-          >
-            {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            {sidebarOpen && <span>{t('layout.collapse')}</span>}
-          </button>
+          <div className="hidden md:block space-y-2">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl hover:bg-white/10 transition-colors text-sm text-white/75 hover:text-white"
+            >
+              {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              {sidebarOpen && <span>{t('layout.collapse')}</span>}
+            </button>
+          </div>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-sm text-white"
           >
             <LogOut className="w-4 h-4" />
-            {sidebarOpen && <span>{t('layout.logout')}</span>}
+            {(sidebarOpen || mobileMenuOpen) && <span>{t('layout.logout')}</span>}
           </button>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <header
-          className="px-8 py-4 flex items-center justify-between shadow-md shrink-0"
+          className="px-4 md:px-8 py-4 flex items-center justify-between shadow-md shrink-0"
           style={{ background: HEADER_GRADIENT, borderBottom: '1px solid rgba(255,255,255,0.12)' }}
         >
-          <div>
-            <p className="text-xs text-red-300 uppercase tracking-wide font-medium">{t('layout_receptor.panel_label')}</p>
-            <h2 className="text-lg font-bold text-white leading-tight">{usuario?.nome}</h2>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 text-white bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <p className="text-xs text-red-300 uppercase tracking-wide font-medium hidden sm:block">{t('layout_receptor.panel_label')}</p>
+              <h2 className="text-base sm:text-lg font-bold text-white leading-tight truncate max-w-37.5 sm:max-w-xs">{usuario?.nome}</h2>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -267,7 +300,7 @@ export const ReceptorLayout = ({ children }: ReceptorLayoutProps) => {
         </header>
 
         <main className="flex-1 overflow-auto">
-          <div className="p-8">{children}</div>
+          <div className="p-4 md:p-8">{children}</div>
         </main>
       </div>
 

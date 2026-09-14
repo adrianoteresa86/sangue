@@ -68,7 +68,7 @@ function AppRoutes() {
   const userRole = auth.usuario?.perfil;
 
   // rotas de admin
-  if (userRole === 'ADMIN') {
+  if (userRole === 'ADMIN' || userRole === 'COORDENADOR_HEMOCENTRO' || userRole === 'TECNICO_HEMOCENTRO') {
     return (
       <Routes>
         <Route
