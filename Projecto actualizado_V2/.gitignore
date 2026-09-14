@@ -9,3 +9,4 @@ build/
 senha_banco.txt
 *.docx
 .vercel/
+public/
