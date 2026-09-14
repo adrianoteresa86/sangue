@@ -1,3 +1,9 @@
 {
-  "name": "doarfazbem-app"
+  "name": "doarfazbem-app",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
