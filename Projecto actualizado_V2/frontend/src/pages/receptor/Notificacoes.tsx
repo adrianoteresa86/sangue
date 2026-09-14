@@ -1,12 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Droplets, CheckCircle, AlertOctagon, Info, Megaphone, Bell } from 'lucide-react';
+import { Droplets, CheckCircle, AlertOctagon, Info, Megaphone, Bell, MessageCircle } from 'lucide-react';
 import api from '../../services/api';
-import type { NotificacoesResponse, NotificacaoReceptor } from '../../types';
+
+interface NotificacaoReceptor {
+  id: number;
+  titulo: string;
+  mensagem: string;
+  tipo: string;
+  lida: boolean;
+  criadoEm: string;
+  lidaEm?: string;
+  remetente?: {
+    id: number;
+    nome: string;
+    email: string;
+  };
+}
+
+interface NotificacoesResponse {
+  total: number;
+  naoLidas: number;
+  notificacoes: NotificacaoReceptor[];
+}
 
 interface TipoConfig {
   icon: React.ReactNode;
@@ -24,6 +44,7 @@ const TIPO_CONFIG: Record<string, TipoConfig> = {
   SYSTEM_ALERT:          { icon: <Info className={ICON_CLASS} />, accent: '#60a5fa', bgNaoLida: '#eff6ff', iconBg: '#dbeafe' },
   ADMIN_NOTIFICATION:    { icon: <Megaphone className={ICON_CLASS} />, accent: '#c084fc', bgNaoLida: '#faf5ff', iconBg: '#f3e8ff' },
   CAMPAIGN_ANNOUNCEMENT: { icon: <Megaphone className={ICON_CLASS} />, accent: '#facc15', bgNaoLida: '#fefce8', iconBg: '#fef9c3' },
+  MESSAGE:               { icon: <MessageCircle className={ICON_CLASS} />, accent: '#10b981', bgNaoLida: '#ecfdf5', iconBg: '#d1fae5' },
 };
 
 const DEFAULT_CONFIG: TipoConfig = {
@@ -38,6 +59,8 @@ function formatDate(iso: string) {
 export const ReceptorNotificacoes: React.FC = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   const { data, isLoading, isError } = useQuery<NotificacoesResponse>({
     queryKey: ['receptor-notificacoes'],
@@ -62,6 +85,17 @@ export const ReceptorNotificacoes: React.FC = () => {
       toast.success(t('receptor.notificacoes.toast_all_marked'));
     },
     onError: () => toast.error(t('receptor.notificacoes.toast_error_all')),
+  });
+
+  const responderMutation = useMutation({
+    mutationFn: ({ id, resposta }: { id: number, resposta: string }) => api.post(`/notificacoes/resposta/${id}`, { resposta }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receptor-notificacoes'] });
+      toast.success('Resposta enviada com sucesso');
+      setReplyingTo(null);
+      setReplyText('');
+    },
+    onError: () => toast.error('Erro ao enviar resposta'),
   });
 
   if (isLoading) {
@@ -126,45 +160,82 @@ export const ReceptorNotificacoes: React.FC = () => {
               return (
                 <div
                   key={n.id}
-                  className="flex items-start gap-4 p-4 transition-colors"
+                  className="flex flex-col sm:flex-row items-start gap-4 p-4 transition-colors"
                   style={{
                     backgroundColor: n.lida ? '#ffffff' : cfg.bgNaoLida,
                     borderLeft: `4px solid ${n.lida ? 'transparent' : cfg.accent}`,
                   }}
                 >
-                  <div
-                    className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: cfg.iconBg, color: cfg.accent }}
-                  >
-                    {cfg.icon}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm font-semibold ${n.lida ? 'text-gray-500' : 'text-gray-900'}`}>
-                        {n.titulo}
-                        {!n.lida && (
-                          <span
-                            className="ml-2 inline-block w-2 h-2 rounded-full align-middle"
-                            style={{ backgroundColor: cfg.accent }}
-                          />
-                        )}
-                      </p>
-                      <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">
-                        {formatDate(n.criadoEm)}
-                      </span>
-                    </div>
-                    <p className={`text-sm mt-1 ${n.lida ? 'text-gray-400' : 'text-gray-600'}`}>{n.mensagem}</p>
-                  </div>
-
-                  {!n.lida && (
-                    <button
-                      onClick={() => lerUmaMutation.mutate(n.id)}
-                      disabled={lerUmaMutation.isPending}
-                      className="text-xs text-primary hover:underline shrink-0 mt-0.5 disabled:opacity-50"
+                  <div className="flex flex-1 items-start gap-4 w-full">
+                    <div
+                      className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: cfg.iconBg, color: cfg.accent }}
                     >
-                      {t('receptor.notificacoes.mark_read')}
-                    </button>
+                      {cfg.icon}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-sm font-semibold ${n.lida ? 'text-gray-500' : 'text-gray-900'}`}>
+                          {n.titulo}
+                          {!n.lida && (
+                            <span
+                              className="ml-2 inline-block w-2 h-2 rounded-full align-middle"
+                              style={{ backgroundColor: cfg.accent }}
+                            />
+                          )}
+                        </p>
+                        <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">
+                          {formatDate(n.criadoEm)}
+                        </span>
+                      </div>
+                      <p className={`text-sm mt-1 ${n.lida ? 'text-gray-400' : 'text-gray-600'}`}>{n.mensagem}</p>
+                      {n.remetente && (
+                        <p className="text-xs text-gray-500 mt-2 font-medium">De: {n.remetente.nome} ({n.remetente.email})</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 shrink-0 sm:items-end w-full sm:w-auto mt-4 sm:mt-0 pl-14 sm:pl-0">
+                    {!n.lida && (
+                      <button
+                        onClick={() => lerUmaMutation.mutate(n.id)}
+                        disabled={lerUmaMutation.isPending}
+                        className="text-xs text-primary hover:underline disabled:opacity-50 text-left sm:text-right"
+                      >
+                        {t('receptor.notificacoes.mark_read')}
+                      </button>
+                    )}
+                    {n.remetente && (
+                      <button
+                        onClick={() => setReplyingTo(replyingTo === n.id ? null : n.id)}
+                        className="text-xs text-primary hover:underline font-medium text-left sm:text-right"
+                      >
+                        {replyingTo === n.id ? 'Cancelar Resposta' : 'Responder'}
+                      </button>
+                    )}
+                  </div>
+
+                  {replyingTo === n.id && (
+                    <div className="w-full pl-14 sm:pl-0 mt-4 sm:mt-2">
+                      <textarea
+                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        rows={2}
+                        placeholder="Escreva a sua resposta..."
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                      />
+                      <div className="flex justify-end mt-2">
+                        <Button 
+                          size="sm" 
+                          disabled={!replyText.trim() || responderMutation.isPending}
+                          loading={responderMutation.isPending}
+                          onClick={() => responderMutation.mutate({ id: n.id, resposta: replyText })}
+                        >
+                          Enviar Resposta
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
               );

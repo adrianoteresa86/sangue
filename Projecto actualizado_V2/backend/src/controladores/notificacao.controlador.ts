@@ -348,20 +348,6 @@ roteador.post('/resposta/:id', autenticacaoIntermediario, async (req, res: Respo
   /* #swagger.tags = ['Notificações']
      #swagger.summary = 'Responder a uma notificação'
      #swagger.security = [{ "bearerAuth": [] }]
-     #swagger.requestBody = {
-       required: true,
-       content: {
-         "application/json": {
-           schema: {
-             type: 'object',
-             required: ['resposta'],
-             properties: {
-               resposta: { type: 'string', example: 'Confirmo que estarei presente.' }
-             }
-           }
-         }
-       }
-     }
   */
   try {
     const autReq = req as RequisicaoAutenticada;
@@ -370,6 +356,28 @@ roteador.post('/resposta/:id', autenticacaoIntermediario, async (req, res: Respo
       resposta: req.body.resposta,
     });
     res.status(201).json(notificacao);
+  } catch (erro: any) {
+    res.status(400).json({ erro: erro.message });
+  }
+});
+
+// POST /api/v1/notificacoes/enviar-mensagem - ADMIN
+roteador.post('/enviar-mensagem', autenticacaoIntermediario, exigirPerfil(PerfilUsuario.ADMIN), async (req: Request, res: Response) => {
+  /* #swagger.tags = ['Notificações']
+     #swagger.summary = 'Enviar mensagem segmentada (ADMIN)'
+     #swagger.security = [{ "bearerAuth": [] }]
+  */
+  try {
+    const autReq = req as RequisicaoAutenticada;
+    const { tipoDestino, destinatarioId, titulo, mensagem } = req.body;
+    const notificacoes = await notificacaoServico.enviarMensagemSegmentada({
+      tipoDestino,
+      destinatarioId: destinatarioId ? Number(destinatarioId) : undefined,
+      titulo,
+      mensagem,
+      idRemetente: Number(autReq.usuario!.sub),
+    });
+    res.status(201).json({ enviadas: notificacoes.length, notificacoes });
   } catch (erro: any) {
     res.status(400).json({ erro: erro.message });
   }

@@ -378,7 +378,7 @@ roteador.delete('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    await repositorioPerfilDoador().softRemove(perfil);
+    await repositorioPerfilDoador().remove(perfil);
     res.status(204).send();
   } catch (erro: any) {
     res.status(500).json({ erro: erro.message });

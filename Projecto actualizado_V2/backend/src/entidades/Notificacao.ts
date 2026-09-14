@@ -18,6 +18,10 @@ export class Notificacao {
   @JoinColumn({ name: 'user_id' })
   destinatario: Usuario;
 
+  @ManyToOne(() => Usuario, { nullable: true })
+  @JoinColumn({ name: 'remetente_id' })
+  remetente: Usuario;
+
   @Column({ name: 'title', nullable: false, length: 200 })
   titulo: string;
 
@@ -44,6 +48,9 @@ export class Notificacao {
 
   @Column({ name: 'related_entity_id', nullable: true })
   idEntidadeRelacionada: number;
+
+  @Column({ name: 'notificacao_pai_id', nullable: true })
+  notificacaoPaiId: number;
 
   @Column({ name: 'email_sent', default: false })
   emailEnviado: boolean;

@@ -15,6 +15,8 @@ export class NotificacaoServico {
     expiraEm?: Date;
     tipoEntidadeRelacionada?: string;
     idEntidadeRelacionada?: number;
+    idRemetente?: number;
+    notificacaoPaiId?: number;
   }): Promise<Notificacao> {
     const destinatario = await repositorioUsuario().findOne({ where: { id: dados.idDestinatario } });
     if (!destinatario) throw new Error('Utilizador destinatário não encontrado');
@@ -27,6 +29,8 @@ export class NotificacaoServico {
       expiraEm: dados.expiraEm,
       tipoEntidadeRelacionada: dados.tipoEntidadeRelacionada,
       idEntidadeRelacionada: dados.idEntidadeRelacionada,
+      remetente: dados.idRemetente ? ({ id: dados.idRemetente } as Usuario) : undefined,
+      notificacaoPaiId: dados.notificacaoPaiId,
     });
 
     return repositorioNotificacao().save(notificacao);
@@ -75,13 +79,13 @@ export class NotificacaoServico {
   }
 
   async buscarTodas(): Promise<Notificacao[]> {
-    return repositorioNotificacao().find({ relations: ['destinatario'], order: { criadoEm: 'DESC' } });
+    return repositorioNotificacao().find({ relations: ['destinatario', 'remetente'], order: { criadoEm: 'DESC' } });
   }
 
   async buscarPorId(id: number): Promise<Notificacao> {
     const notificacao = await repositorioNotificacao().findOne({
       where: { id },
-      relations: ['destinatario'],
+      relations: ['destinatario', 'remetente'],
     });
     if (!notificacao) throw new Error('Notificação não encontrada');
     return notificacao;
@@ -103,6 +107,7 @@ export class NotificacaoServico {
   async buscarPorUsuario(idUsuario: number): Promise<Notificacao[]> {
     return repositorioNotificacao().find({
       where: { destinatario: { id: idUsuario } },
+      relations: ['remetente'],
       order: { criadoEm: 'DESC' },
     });
   }
@@ -110,6 +115,7 @@ export class NotificacaoServico {
   async buscarNaoLidasPorUsuario(idUsuario: number): Promise<Notificacao[]> {
     return repositorioNotificacao().find({
       where: { destinatario: { id: idUsuario }, lida: false },
+      relations: ['remetente'],
       order: { criadoEm: 'DESC' },
     });
   }
@@ -272,13 +278,51 @@ export class NotificacaoServico {
   }): Promise<Notificacao> {
     const original = await this.buscarPorId(idNotificacaoOriginal);
     return this.criar({
-      idDestinatario: dados.idRemetente,
+      idDestinatario: original.remetente ? original.remetente.id : original.destinatario.id, // send back to sender if it exists
       titulo: `Re: ${original.titulo}`,
       mensagem: dados.resposta,
-      tipo: TipoNotificacao.ALERTA_SISTEMA,
-      tipoEntidadeRelacionada: 'notificacao',
-      idEntidadeRelacionada: idNotificacaoOriginal,
+      tipo: TipoNotificacao.MENSAGEM,
+      idRemetente: dados.idRemetente,
+      notificacaoPaiId: original.id,
     });
+  }
+
+  async enviarMensagemSegmentada(dados: {
+    tipoDestino: 'TODOS' | 'HEMOCENTRO' | 'USUARIO';
+    idRemetente: number;
+    titulo: string;
+    mensagem: string;
+    destinatarioId?: number;
+  }): Promise<Notificacao[]> {
+    let utilizadores: Usuario[] = [];
+
+    if (dados.tipoDestino === 'TODOS') {
+      utilizadores = await repositorioUsuario().find();
+    } else if (dados.tipoDestino === 'HEMOCENTRO' && dados.destinatarioId) {
+      utilizadores = await repositorioUsuario().find({
+        where: { perfilHemocentro: { hemocentro: { id: dados.destinatarioId } } }
+      });
+    } else if (dados.tipoDestino === 'USUARIO' && dados.destinatarioId) {
+      const u = await repositorioUsuario().findOne({ where: { id: dados.destinatarioId } });
+      if (u) utilizadores.push(u);
+    }
+
+    const resultados: Notificacao[] = [];
+    for (const u of utilizadores) {
+      try {
+        const n = await this.criar({
+          idDestinatario: u.id,
+          titulo: dados.titulo,
+          mensagem: dados.mensagem,
+          tipo: TipoNotificacao.MENSAGEM,
+          idRemetente: dados.idRemetente,
+        });
+        resultados.push(n);
+      } catch (e) {
+        // Ignorar
+      }
+    }
+    return resultados;
   }
 }
 

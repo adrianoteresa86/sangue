@@ -278,6 +278,7 @@ export class ReceptorServico {
     const [notificacoes, naoLidas] = await Promise.all([
       repositorioNotificacao().find({
         where: { destinatario: { id: idUsuario } },
+        relations: ['remetente'],
         order: { criadoEm: 'DESC' },
       }),
       repositorioNotificacao().count({

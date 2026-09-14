@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, BellOff, CheckCheck, Clock, Droplets, FlaskConical, Megaphone, AlertTriangle, Calendar, Activity, XCircle } from 'lucide-react';
+import { Bell, BellOff, CheckCheck, Clock, Droplets, FlaskConical, Megaphone, AlertTriangle, Calendar, Activity, XCircle, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '../../components/common/Button';
 import api from '../../services/api';
 
 interface Notificacao {
@@ -12,6 +13,11 @@ interface Notificacao {
   lida: boolean;
   criadoEm: string;
   lidaEm?: string;
+  remetente?: {
+    id: number;
+    nome: string;
+    email: string;
+  };
 }
 
 function formatRelativo(iso: string) {
@@ -28,15 +34,16 @@ function formatRelativo(iso: string) {
 
 const TIPO_CFG: Record<string, { Icon: React.ElementType; bg: string; color: string }> = {
   DONATION_REMINDER:      { Icon: Clock,          bg: '#fef9c3', color: '#854d0e' },
-  DONATION_CONFIRMED:     { Icon: Droplets,        bg: '#dcfce7', color: '#166534' },
-  DONATION_CANCELLED:     { Icon: XCircle,         bg: '#fee2e2', color: '#991b1b' },
-  DONATION_REFUSED:       { Icon: XCircle,         bg: '#fee2e2', color: '#991b1b' },
-  TRIAGE_IN_PROCESSING:   { Icon: FlaskConical,    bg: '#ede9fe', color: '#5b21b6' },
-  CAMPAIGN_ANNOUNCEMENT:  { Icon: Megaphone,       bg: '#dbeafe', color: '#1d4ed8' },
-  BLOOD_URGENCY:          { Icon: AlertTriangle,   bg: '#fff7ed', color: '#c2410c' },
-  APPOINTMENT_SCHEDULED:  { Icon: Calendar,        bg: '#f0fdf4', color: '#16a34a' },
-  TEST_RESULTS_READY:     { Icon: Activity,        bg: '#fdf4ff', color: '#7e22ce' },
-  SYSTEM_ALERT:           { Icon: AlertTriangle,   bg: '#f1f5f9', color: '#475569' },
+  DONATION_CONFIRMED:     { Icon: Droplets,       bg: '#dcfce7', color: '#166534' },
+  DONATION_CANCELLED:     { Icon: XCircle,        bg: '#fee2e2', color: '#991b1b' },
+  DONATION_REFUSED:       { Icon: XCircle,        bg: '#fee2e2', color: '#991b1b' },
+  TRIAGE_IN_PROCESSING:   { Icon: FlaskConical,   bg: '#ede9fe', color: '#5b21b6' },
+  CAMPAIGN_ANNOUNCEMENT:  { Icon: Megaphone,      bg: '#dbeafe', color: '#1d4ed8' },
+  BLOOD_URGENCY:          { Icon: AlertTriangle,  bg: '#fff7ed', color: '#c2410c' },
+  APPOINTMENT_SCHEDULED:  { Icon: Calendar,       bg: '#f0fdf4', color: '#16a34a' },
+  TEST_RESULTS_READY:     { Icon: Activity,       bg: '#fdf4ff', color: '#7e22ce' },
+  SYSTEM_ALERT:           { Icon: AlertTriangle,  bg: '#f1f5f9', color: '#475569' },
+  MESSAGE:                { Icon: MessageCircle,  bg: '#ecfdf5', color: '#10b981' },
 };
 
 const FILTROS = [
@@ -48,6 +55,8 @@ const FILTROS = [
 export const DoadorNotificacoes: React.FC = () => {
   const queryClient = useQueryClient();
   const [filtro, setFiltro] = useState('todas');
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   const { data: notificacoes = [], isLoading } = useQuery<Notificacao[]>({
     queryKey: ['minhas-notificacoes'],
@@ -58,7 +67,7 @@ export const DoadorNotificacoes: React.FC = () => {
     mutationFn: (id: number) => api.patch(`/notificacoes/${id}/lida`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['minhas-notificacoes'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-notificacoes-count'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-notificacoes-count'] }); // some common key
     },
   });
 
@@ -69,6 +78,17 @@ export const DoadorNotificacoes: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-notificacoes-count'] });
       toast.success('Todas as notificações marcadas como lidas.');
     },
+  });
+
+  const responderMutation = useMutation({
+    mutationFn: ({ id, resposta }: { id: number, resposta: string }) => api.post(`/notificacoes/resposta/${id}`, { resposta }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['minhas-notificacoes'] });
+      toast.success('Resposta enviada com sucesso');
+      setReplyingTo(null);
+      setReplyText('');
+    },
+    onError: () => toast.error('Erro ao enviar resposta'),
   });
 
   const lista = notificacoes.filter((n) => {
@@ -151,35 +171,78 @@ export const DoadorNotificacoes: React.FC = () => {
             return (
               <div
                 key={n.id}
-                onClick={() => !n.lida && marcarLidaMutation.mutate(n.id)}
-                className={`flex gap-4 p-4 rounded-xl border transition-all ${
+                className={`flex flex-col gap-4 p-4 rounded-xl border transition-all ${
                   n.lida
                     ? 'bg-white border-gray-100 opacity-70'
-                    : 'bg-white border-gray-200 shadow-sm cursor-pointer hover:shadow-md'
+                    : 'bg-white border-gray-200 shadow-sm hover:shadow-md'
                 }`}
               >
-                {/* Ícone */}
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ backgroundColor: bg }}
+                <div 
+                  className="flex gap-4 cursor-pointer"
+                  onClick={() => !n.lida && marcarLidaMutation.mutate(n.id)}
                 >
-                  <Icon className="w-5 h-5" style={{ color }} />
-                </div>
-
-                {/* Conteúdo */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className={`text-sm font-semibold leading-tight ${n.lida ? 'text-gray-600' : 'text-gray-900'}`}>
-                      {n.titulo}
-                    </p>
-                    <span className="text-xs text-gray-400 shrink-0">{formatRelativo(n.criadoEm)}</span>
+                  {/* Ícone */}
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                    style={{ backgroundColor: bg }}
+                  >
+                    <Icon className="w-5 h-5" style={{ color }} />
                   </div>
-                  <p className="text-sm text-gray-500 mt-1 leading-relaxed">{n.mensagem}</p>
+
+                  {/* Conteúdo */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className={`text-sm font-semibold leading-tight ${n.lida ? 'text-gray-600' : 'text-gray-900'}`}>
+                        {n.titulo}
+                      </p>
+                      <span className="text-xs text-gray-400 shrink-0">{formatRelativo(n.criadoEm)}</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1 leading-relaxed">{n.mensagem}</p>
+                    
+                    {n.remetente && (
+                      <p className="text-xs text-gray-500 mt-2 font-medium">De: {n.remetente.nome} ({n.remetente.email})</p>
+                    )}
+                  </div>
+
+                  {/* Indicador não lida */}
+                  <div className="flex flex-col gap-2 shrink-0 items-end">
+                    {!n.lida && (
+                      <div className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1" />
+                    )}
+                    {n.remetente && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReplyingTo(replyingTo === n.id ? null : n.id);
+                        }}
+                        className="text-xs text-red-600 hover:underline font-medium mt-2"
+                      >
+                        {replyingTo === n.id ? 'Cancelar Resposta' : 'Responder'}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Indicador não lida */}
-                {!n.lida && (
-                  <div className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-2" />
+                {replyingTo === n.id && (
+                  <div className="w-full pl-14 mt-2">
+                    <textarea
+                      className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
+                      rows={2}
+                      placeholder="Escreva a sua resposta..."
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                    />
+                    <div className="flex justify-end mt-2">
+                      <Button 
+                        size="sm" 
+                        disabled={!replyText.trim() || responderMutation.isPending}
+                        loading={responderMutation.isPending}
+                        onClick={() => responderMutation.mutate({ id: n.id, resposta: replyText })}
+                      >
+                        Enviar Resposta
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             );
